@@ -20,11 +20,13 @@
 
 ## 5. Arquitetura
 - MVP: HTML5, CSS moderno (Grid/Flexbox), JavaScript ES6 puro, sem dependências.
-- Backend futuro: Node.js + Socket.io para salas em tempo real.
+- Backend: Node.js + Socket.io (`server/`). Salas privadas por código de 4 letras, até 10 pessoas, rodízio do dador por carta. O servidor é a autoridade: roda o `Game` e manda a cada aparelho só a visão dele.
 
 ## Mapa do código atual
 - `WordBank` → pacotes de palavras (base para pacotes temáticos).
 - `Hooks` → eventos `roundResolved` (coleta de pistas p/ Fase 2) e `gameEnd` (anúncio entre partidas).
 - `Theme` + `[data-skin]` no CSS → skins.
-- `Game` → estado oficial da partida (migrará para o servidor).
-- `UI` → estado visual local (seleção/hover) e renderização.
+- `Game` → estado oficial da partida (no modo online, roda no servidor).
+- `Salas` (servidor) → salas, anfitrião, dador da vez, permissões, reconexão por token.
+- `Rede` → cliente Socket.io com a mesma interface do `Game`; `Lobby` → criar/entrar na sala.
+- `UI` → estado visual local (seleção/hover) e renderização, nos modos local e online.
