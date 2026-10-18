@@ -83,3 +83,66 @@ test('três aparelhos jogam: segredo só para o dador, permissões e reconexão'
   assert.equal(deVolta.sala.jogadores.length, 3);
   assert.equal(deVolta.jogo.historico.length, 1);
 });
+
+test('chat e sinais de voz ficam dentro da sala', async (t) => {
+  const srv = await subir();
+  const a = cliente(srv.url), b = cliente(srv.url), x = cliente(srv.url);
+  t.after(() => { for (const s of [a, b, x]) s.close(); srv.io.close(); });
+  const recebidos = { a: [], b: [], x: [] };
+  a.on('chat', (m) => recebidos.a.push(m));
+  b.on('chat', (m) => recebidos.b.push(m));
+  x.on('chat', (m) => recebidos.x.push(m));
+
+  const sala1 = await a.pedir('criar', { nome: 'Ana', token: 'tA' });
+  await b.pedir('entrar', { codigo: sala1.codigo, nome: 'Bia', token: 'tB' });
+  await x.pedir('criar', { nome: 'Xis', token: 'tX' }); // outra sala
+
+  assert.ok((await b.pedir('chat', { texto: 'bora jogar' })).ok);
+  assert.equal((await b.pedir('chat', { texto: '' })).ok, false);
+  await new Promise((r) => setTimeout(r, 100));
+  assert.deepEqual(recebidos.a.map((m) => m.texto), ['bora jogar']);
+  assert.equal(recebidos.b.length, 1);
+  assert.equal(recebidos.x.length, 0);
+
+  // Quem entra depois recebe o histórico.
+  const c = cliente(srv.url);
+  t.after(() => c.close());
+  const historico = new Promise((ok) => c.once('chat:historico', ok));
+  await c.pedir('entrar', { codigo: sala1.codigo, nome: 'Caio', token: 'tC' });
+  assert.deepEqual((await historico).map((m) => m.texto), ['bora jogar']);
+
+  // Voz: config com STUN, estado visível e sinal entregue só a quem está na voz da mesma sala.
+  const config = await a.pedir('voz:config');
+  assert.ok(config.iceServers[0].urls.length > 0);
+  assert.ok((await a.pedir('voz:estado', { estado: 'ligado' })).ok);
+  assert.ok((await b.pedir('voz:estado', { estado: 'mudo' })).ok);
+  assert.ok((await x.pedir('voz:estado', { estado: 'ligado' })).ok);
+  const estadoB = await b.esperarEstado((e) => e.sala.jogadores.every((j) => j.nome === 'Caio' || j.voz));
+  const idA = estadoB.sala.jogadores.find((j) => j.nome === 'Ana').id;
+  const idB = estadoB.sala.euId;
+  const idX = x.ultimo.sala.euId;
+
+  const sinaisB = [], sinaisX = [];
+  b.on('voz:sinal', (s) => sinaisB.push(s));
+  x.on('voz:sinal', (s) => sinaisX.push(s));
+  a.emit('voz:sinal', { para: idB, dados: { sdp: { type: 'offer', sdp: 'v=0' } } });
+  a.emit('voz:sinal', { para: idX, dados: { sdp: { type: 'offer', sdp: 'v=0' } } }); // outra sala
+  a.emit('voz:sinal', { para: idB, dados: { sdp: { type: 'hack', sdp: 'v=0' } } }); // inválido
+  a.emit('voz:sinal', { para: idB, dados: { candidato: { candidate: 'x'.repeat(30000) } } }); // grande demais
+  c.emit('voz:sinal', { para: idB, dados: { candidato: null } }); // Caio não está na voz
+  await new Promise((r) => setTimeout(r, 150));
+  assert.equal(sinaisB.length, 1);
+  assert.equal(sinaisB[0].de, idA);
+  assert.equal(sinaisX.length, 0);
+
+  // Ao cair, sai da voz para os outros.
+  a.close();
+  await b.esperarEstado((e) => e.sala.jogadores.find((j) => j.id === idA).voz === null);
+});
+
+test('TURN opcional pelas variáveis de ambiente', () => {
+  const { servidoresIce } = require('../server/index.js');
+  assert.equal(servidoresIce({}).length, 1);
+  const com = servidoresIce({ TURN_URL: 'turn:a.com:3478, turns:a.com:5349', TURN_USERNAME: 'u', TURN_CREDENTIAL: 'p' });
+  assert.deepEqual(com[1], { urls: ['turn:a.com:3478', 'turns:a.com:5349'], username: 'u', credential: 'p' });
+});

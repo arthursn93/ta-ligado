@@ -36,6 +36,11 @@ var Rede = (function () {
     var codigo = null;
     var conectado = false;
     var assinantes = [];
+    var aoEntrarFns = [];
+
+    function entrou() {
+      aoEntrarFns.slice().forEach(function (fn) { fn(); });
+    }
 
     function avisar() {
       assinantes.slice().forEach(function (fn) { fn(estado); });
@@ -54,6 +59,7 @@ var Rede = (function () {
       codigo = novoCodigo;
       gravar(CHAVE_SALA, novoCodigo);
       if (nome) gravar(CHAVE_NOME, nome);
+      entrou();
     }
 
     socket.on('estado', function (novo) {
@@ -67,7 +73,7 @@ var Rede = (function () {
       var salva = codigo || ler(CHAVE_SALA);
       if (salva) {
         pedir('entrar', { codigo: salva, token: token }).then(function (r) {
-          if (r.ok) { codigo = r.codigo; return; }
+          if (r.ok) { codigo = r.codigo; entrou(); return; }
           // A sala acabou enquanto estávamos fora.
           codigo = null;
           estado = null;
@@ -118,6 +124,13 @@ var Rede = (function () {
         });
       },
       iniciar: function () { return pedir('iniciar'); },
+
+      // Chat e voz (Social.js)
+      emitir: pedir,
+      enviar: function (evento, dados) { if (socket.connected) socket.emit(evento, dados); },
+      on: function (evento, fn) { socket.on(evento, fn); },
+      /** Chamado sempre que este aparelho entra (ou volta) numa sala. */
+      aoEntrar: function (fn) { aoEntrarFns.push(fn); },
       sair: function () {
         codigo = null;
         gravar(CHAVE_SALA, null);

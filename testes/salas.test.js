@@ -145,3 +145,58 @@ test('sala some quando todos saem ou ficam desconectados', () => {
   g.removerSeVazia(sala.codigo);
   assert.equal(g.total(), 0);
 });
+
+test('chat: limpa o texto, recusa vazio, longo e excesso de mensagens', () => {
+  const { g, codigo } = salaComTres();
+  const r = g.enviarMensagem(codigo, 'tA', '  oi\u0000  turma\n ');
+  assert.ok(r.ok);
+  assert.equal(r.mensagem.texto, 'oi turma');
+  assert.equal(r.mensagem.nome, 'Ana');
+  assert.equal(g.enviarMensagem(codigo, 'tA', '   ').ok, false);
+  assert.equal(g.enviarMensagem(codigo, 'tA', 'x'.repeat(201)).ok, false);
+  assert.equal(g.enviarMensagem(codigo, 'tA', { texto: 'oi' }).ok, false);
+  assert.equal(g.enviarMensagem(codigo, 'intruso', 'oi').ok, false);
+  const t0 = 1000000;
+  for (let i = 0; i < 6; i++) assert.ok(g.enviarMensagem(codigo, 'tB', 'msg' + i, t0 + i).ok);
+  assert.equal(g.enviarMensagem(codigo, 'tB', 'de novo', t0 + 10).ok, false);
+  assert.ok(g.enviarMensagem(codigo, 'tB', 'depois', t0 + 11000).ok);
+});
+
+test('chat guarda só as últimas 50 mensagens', () => {
+  const { g, codigo } = salaComTres();
+  for (let i = 0; i < 60; i++) g.enviarMensagem(codigo, ['tA', 'tB', 'tC'][i % 3], 'm' + i, i * 4000);
+  const h = g.historicoChat(codigo);
+  assert.equal(h.length, 50);
+  assert.equal(h[49].texto, 'm59');
+});
+
+test('voz: estado aparece para todos, só vale entre jogadores na voz e cai ao desconectar', () => {
+  const { g, sala, codigo } = salaComTres();
+  assert.ok(g.definirVoz(codigo, 'tA', 'ligado', 'sockA').ok);
+  assert.equal(g.definirVoz(codigo, 'tB', 'gritando', 'sockB').ok, false);
+  const idB = sala.jogadores[1].id;
+  const idA = sala.jogadores[0].id;
+  assert.equal(g.destinoDoSinal(codigo, 'tA', idB), null); // B não está na voz
+  g.definirVoz(codigo, 'tB', 'ouvindo', 'sockB');
+  assert.deepEqual(g.destinoDoSinal(codigo, 'tA', idB), { deId: idA, socketId: 'sockB' });
+  assert.equal(g.destinoDoSinal(codigo, 'tC', idB), null); // C não está na voz
+  assert.equal(g.visaoPara(sala, 'tC').sala.jogadores[0].voz, 'ligado');
+  g.vozCaiu(codigo, 'sockA');
+  assert.equal(sala.jogadores[0].voz, null);
+  g.definirVoz(codigo, 'tA', 'mudo', 'sockA2');
+  g.desconectar(codigo, 'tA');
+  assert.equal(sala.jogadores[0].voz, null);
+});
+
+test('chat: o dador da vez não escreve enquanto a carta está em jogo', () => {
+  const { g, sala, codigo } = salaComTres();
+  g.iniciar(codigo, 'tA');
+  const dador = tokenDoDador(sala);
+  const outro = ['tA', 'tB', 'tC'].find((t) => t !== dador);
+  assert.equal(g.enviarMensagem(codigo, dador, 'é a A1!').ok, false);
+  assert.ok(g.enviarMensagem(codigo, outro, 'hmm').ok);
+  g.agir(codigo, dador, { tipo: 'DAR_PISTA', pista: 'azqxw' });
+  assert.equal(g.enviarMensagem(codigo, dador, 'vai na A1').ok, false);
+  g.agir(codigo, outro, { tipo: 'CHUTAR', coordenada: 'A1' });
+  assert.ok(g.enviarMensagem(codigo, dador, 'ah, era essa!').ok); // a vez já passou
+});

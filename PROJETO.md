@@ -20,6 +20,7 @@
 
 ## 5. Arquitetura
 - MVP: HTML5, CSS moderno (Grid/Flexbox), JavaScript ES6 puro, sem dependências.
+- Social: chat por sala (validado no servidor, histórico das últimas 50, limite contra spam, dador não escreve durante a própria carta) e voz por WebRTC em malha, com sinalização pelo Socket.io e STUN público. TURN opcional por `TURN_URL`/`TURN_USERNAME`/`TURN_CREDENTIAL`.
 - Hospedagem: Render (Web Service gratuito, configurado pelo `render.yaml`; verificação de saúde em `/saude`). Salas ficam em memória, então somem quando o serviço reinicia.
 - Backend: Node.js + Socket.io (`server/`). Salas privadas por código de 4 letras, até 10 pessoas, rodízio do dador por carta. O servidor é a autoridade: roda o `Game` e manda a cada aparelho só a visão dele.
 

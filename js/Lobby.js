@@ -50,6 +50,7 @@ var Lobby = (function () {
     '    <div class="codigo-sala" aria-live="polite"></div>',
     '    <button type="button" class="botao botao-fantasma botao-pequeno" data-lobby="copiar">Copiar convite</button>',
     '    <p class="lobby-copiado suave" aria-live="polite"></p>',
+    '    <div class="lobby-social"></div>',
     '    <h2>Quem está na sala</h2>',
     '    <ul class="lista-jogadores"></ul>',
     '    <div class="lobby-acoes"></div>',
@@ -81,6 +82,7 @@ var Lobby = (function () {
           raiz.querySelector(foco).focus();
         } else if (tela === 'sala') {
           raiz.innerHTML = MOLDE_SALA;
+          if (opcoes.social) raiz.querySelector('.lobby-social').innerHTML = opcoes.social.slot();
         } else {
           raiz.innerHTML = '<div class="lobby"><h1 class="marca marca-grande">Tá <span>Ligado?</span></h1>' +
             '<p class="lobby-sub">Voltando para a sala…</p></div>';
@@ -95,9 +97,10 @@ var Lobby = (function () {
       }).join('');
 
       raiz.querySelector('.lista-jogadores').innerHTML = sala.jogadores.map(function (j) {
-        return '<li class="' + (j.online ? '' : 'is-offline') + '">' +
+        return '<li class="' + (j.online ? '' : 'is-offline') + '" data-jogador-id="' + esc(j.id) + '">' +
           '<span class="avatar">' + esc(j.nome.charAt(0).toUpperCase()) + '</span>' +
           '<span class="jogador-nome">' + esc(j.nome) + (j.id === sala.euId ? ' <small>(você)</small>' : '') + '</span>' +
+          (opcoes.social ? opcoes.social.iconeVoz(j) : '') +
           (j.id === sala.anfitriaoId ? '<span class="selo-anfitriao" title="Anfitrião">👑</span>' : '') +
           (j.online ? '' : '<small class="jogador-status">saiu</small>') +
           '</li>';
@@ -114,6 +117,7 @@ var Lobby = (function () {
         html = '<p class="suave">Esperando ' + esc(anfitriao ? anfitriao.nome : 'o anfitrião') + ' começar a partida…</p>';
       }
       if (html !== acoesAtuais) { acoesAtuais = html; raiz.querySelector('.lobby-acoes').innerHTML = html; }
+      if (opcoes.social) opcoes.social.atualizar();
     }
 
     function mostrarErro(mensagem) {

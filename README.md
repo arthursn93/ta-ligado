@@ -20,6 +20,15 @@ Abra `http://localhost:3000`, digite seu nome e crie uma sala. Mande o código d
 - Quem recarregar a página ou perder a conexão volta para o mesmo lugar. Se o dador cair antes de dar a pista, a vez passa para o próximo.
 - O servidor é o juiz: as regras rodam só nele, e cada aparelho recebe apenas o que pode ver.
 
+### Chat e voz
+
+Dentro da sala (na espera e durante a partida) aparecem dois botões: 🎙️ **Voz** e 💬 **Chat**.
+
+- **Chat:** as mensagens vão só para quem está na mesma sala. No computador o chat fica aberto ao lado do tabuleiro; no celular abre por cima e um número avisa as mensagens novas. Quem está dando a pista não escreve enquanto a carta está em jogo, para não dar dica extra.
+- **Voz:** ao tocar em Voz, o jogo explica e só então o navegador pede o microfone. Dá para ligar e desligar o microfone a qualquer hora, ou entrar só para ouvir. Ao lado de cada nome aparece 🎙️ (microfone ligado), 🔇 (desligado) ou 🎧 (só ouvindo), e o nome acende quando a pessoa fala.
+- O áudio vai direto de aparelho para aparelho (WebRTC); o servidor só ajuda a combinar a conexão. Cada aparelho conecta com cada outro, o que funciona bem para salas pequenas como as do jogo (até 10 pessoas).
+- Em algumas redes mais fechadas (certos 4G e redes de empresa) o áudio não consegue passar direto e precisa de um servidor TURN. Se alguém entrar na voz e não ouvir ninguém, configure um TURN nas variáveis de ambiente do servidor: `TURN_URL` (ex.: `turn:turn.exemplo.com:3478`, pode ter vários separados por vírgula), `TURN_USERNAME` e `TURN_CREDENTIAL`. No Render, isso fica em **Environment** no painel do serviço.
+
 Para jogar com gente de fora da sua rede, publique o servidor (veja abaixo).
 
 ## Publicar no Render
@@ -53,6 +62,7 @@ Abra o `index.html` direto no navegador (dois cliques, sem servidor) e o aparelh
 | `js/Hooks.js` | Eventos para extensões (`roundResolved`, `gameEnd`). |
 | `js/UI.js` | Interface: grade, painel, fluxo de passar o aparelho e modo online. |
 | `js/Lobby.js` | Tela de entrada online: criar sala, entrar com código, sala de espera. |
+| `js/Social.js` | Chat e voz da sala (WebRTC de aparelho para aparelho, sinalização pelo Socket.io). |
 | `js/Rede.js` | Cliente Socket.io com a mesma interface do `Game` (`visao`, `executar`, `assinar`). |
 | `server/index.js` | Servidor HTTP + Socket.io. Serve só os arquivos do jogo. |
 | `server/Salas.js` | Salas por código, anfitrião, rodízio do dador, permissões e reconexão. |

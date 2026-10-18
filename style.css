@@ -719,6 +719,116 @@ button { font: inherit; color: inherit; }
 .chip-alerta { background: var(--moldura); border-color: var(--moldura); color: var(--papel); }
 .barra-sala .botao-pequeno { padding: 5px 10px; font-size: 13px; }
 
+/* ---------- Chat e voz ---------- */
+
+.social-botoes { flex: none; display: flex; align-items: center; gap: 6px; }
+.lobby-social .social-botoes { justify-content: center; margin-top: 4px; }
+.botao-social {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 34px;
+  min-width: 34px;
+  padding: 0 9px;
+  border: 2px solid var(--tinta);
+  border-radius: 999px;
+  background: var(--papel);
+  font-family: var(--fonte-etiqueta);
+  font-size: 15px;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 3px 0 rgba(36, 32, 58, 0.22);
+}
+.botao-social:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(36, 32, 58, 0.22); }
+.botao-social:focus-visible { outline: 3px solid var(--tinta); outline-offset: 2px; }
+.botao-voz.is-ligado { background: var(--dica); border-color: var(--dica); }
+.botao-voz.is-mudo { background: var(--moldura); border-color: var(--moldura); }
+.botao-voz.is-ouvindo { background: var(--palavra); border-color: var(--moldura); }
+.botao-sair-voz { min-width: 28px; height: 28px; padding: 0 7px; font-size: 12px; }
+.botao-chat.is-aberto { background: var(--palavra); }
+.badge {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--moldura);
+  color: var(--papel);
+  font: 800 11px/19px var(--fonte);
+  text-align: center;
+}
+.icone-voz { font-size: 0.85em; }
+.chip.is-falando, .lista-jogadores li.is-falando .avatar { box-shadow: 0 0 0 3px var(--dica); }
+.lista-jogadores li.is-falando .avatar { background: var(--dica); color: var(--papel); }
+
+.chat {
+  position: fixed;
+  z-index: 9;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: min(55vh, 460px);
+  display: flex;
+  flex-direction: column;
+  border-top: 5px solid var(--moldura);
+  border-radius: 18px 18px 0 0;
+  background: var(--papel);
+  box-shadow: 0 -6px 0 rgba(36, 32, 58, 0.15);
+  animation: subir 0.25s ease;
+}
+.chat[hidden] { display: none; }
+.chat-topo { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px 6px; }
+.chat-topo h2 { margin: 0; font-family: var(--fonte-etiqueta); font-size: 17px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--moldura); }
+.chat-fechar { border: 0; background: none; font-size: 20px; cursor: pointer; padding: 4px 8px; }
+.chat-lista { flex: 1; min-height: 0; margin: 0; padding: 4px 16px 8px; list-style: none; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.msg { font-size: 15px; line-height: 1.35; word-wrap: break-word; overflow-wrap: anywhere; }
+.msg-autor { margin-right: 6px; color: var(--cor); }
+.msg-texto { font-weight: 600; }
+.msg time { margin-left: 6px; font-size: 11px; color: var(--tinta-suave); }
+.msg.is-minha .msg-autor::after { content: ' (você)'; font-weight: 600; color: var(--tinta-suave); }
+.msg-vazia { color: var(--tinta-suave); font-size: 14px; }
+.chat-form { display: flex; gap: 8px; padding: 8px 16px 0; }
+.chat-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 3px solid var(--tinta);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--tinta);
+  font: 700 16px var(--fonte);
+  outline: none;
+}
+.chat-form input:focus { border-color: var(--moldura); }
+.chat-form input:disabled { background: #f1ece2; font-size: 13px; }
+.chat-form .botao { padding: 0 16px; }
+.chat-erro { min-height: 18px; margin: 4px 16px calc(8px + env(safe-area-inset-bottom)); font-size: 13px; color: var(--moldura); }
+
+.acoes-coluna { flex-direction: column; }
+.social-sobreposicao { z-index: 12; }
+
+@keyframes subir { from { transform: translateY(30px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* Tela larga: o chat fica ao lado do jogo, sem cobrir nada. */
+@media (min-width: 1100px) {
+  body.com-chat { padding-right: 340px; }
+  .chat {
+    left: auto;
+    right: 20px;
+    top: 20px;
+    bottom: 20px;
+    width: 300px;
+    height: auto;
+    border: 5px solid var(--moldura);
+    border-radius: 18px;
+    box-shadow: 0 0 0 3px var(--papel), 0 8px 0 3px rgba(36, 32, 58, 0.2);
+  }
+  .chat-fechar { display: block; }
+}
+
 /* ---------- Confete ---------- */
 
 .confete { position: fixed; inset: 0; z-index: 20; overflow: hidden; pointer-events: none; }
@@ -794,6 +904,12 @@ button { font: inherit; color: inherit; }
 }
 
 @media (max-width: 560px) {
+  .botao-social { height: 32px; min-width: 32px; padding: 0 7px; font-size: 14px; }
+  .botao-social-texto { display: none; }
+  /* Celular: código e botões numa linha, jogadores na de baixo. */
+  .barra-sala { flex-wrap: wrap; gap: 6px; row-gap: 4px; }
+  .barra-codigo { margin-right: auto; }
+  .barra-jogadores { order: 5; flex-basis: 100%; }
   .marca-grande { font-size: 46px; }
   .codigo-sala span { width: 54px; height: 64px; font-size: 38px; }
   .barra-codigo { font-size: 13px; }

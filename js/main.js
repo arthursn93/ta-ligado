@@ -15,11 +15,14 @@
 
   function jogarOnline() {
     var rede = Rede.criar(window.io());
+    var social = Social.criar(rede);
     Lobby.criar(raiz, rede, {
+      social: social,
       aoJogarLocal: jogarLocal,
       aoComecar: function () {
         UI.criar(raiz, rede, {
           online: true,
+          social: social,
           aoSair: function () {
             rede.sair().then(function () { window.location.href = window.location.pathname; });
           }
