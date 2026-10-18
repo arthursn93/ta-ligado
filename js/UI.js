@@ -304,15 +304,18 @@ var UI = (function () {
       var html = '<span class="barra-codigo">Sala <b>' + esc(sala.codigo) + '</b></span>' +
         '<ul class="barra-jogadores">' + sala.jogadores.map(function (j) {
           var classes = (j.online ? '' : ' is-offline') + (j.id === sala.dadorId ? ' is-dador' : '') + (j.id === sala.euId ? ' is-eu' : '');
-          return '<li class="chip' + classes + '" title="' + esc(j.nome) +
+          return '<li class="chip' + classes + '" data-jogador-id="' + esc(j.id) + '" title="' + esc(j.nome) +
             (j.id === sala.dadorId ? ' está dando a pista' : '') + (j.online ? '' : ' (desconectado)') + '">' +
             (j.id === sala.dadorId ? '<span aria-hidden="true">🎤</span> ' : '') + esc(j.nome) +
-            (j.id === sala.anfitriaoId ? ' <span aria-label="anfitrião">👑</span>' : '') + '</li>';
+            (j.id === sala.anfitriaoId ? ' <span aria-label="anfitrião">👑</span>' : '') +
+            (opcoes.social ? opcoes.social.iconeVoz(j) : '') + '</li>';
         }).join('') + '</ul>' +
         (jogo.conectado() ? '' : '<span class="chip chip-alerta">Reconectando…</span>') +
+        (opcoes.social ? opcoes.social.slot() : '') +
         '<button class="botao botao-fantasma botao-pequeno" data-acao="sair-sala">Sair</button>';
       if (barraAtual !== html) { barraAtual = html; el.barra.innerHTML = html; }
       el.barra.hidden = false;
+      if (opcoes.social) opcoes.social.atualizar();
     }
 
     function mostrarErroPista(mensagem) {

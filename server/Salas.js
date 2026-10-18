@@ -15,6 +15,11 @@ const Game = require('../js/Game.js');
 const LETRAS_CODIGO = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // sem I e O, que confundem com 1 e 0
 const MAX_JOGADORES = 10;
 const TAMANHO_MAX_NOME = 20;
+const TAMANHO_MAX_MENSAGEM = 200;
+const HISTORICO_CHAT = 50;
+const LIMITE_MENSAGENS = 6; // por jogador, a cada JANELA_MENSAGENS_MS
+const JANELA_MENSAGENS_MS = 10000;
+const ESTADOS_VOZ = ['ouvindo', 'mudo', 'ligado']; // null = fora da voz
 
 function criarGerenciador(opcoes) {
   opcoes = opcoes || {};
@@ -43,7 +48,7 @@ function criarGerenciador(opcoes) {
   }
 
   function novoJogador(sala, token, nome) {
-    const jogador = { id: crypto.randomUUID().slice(0, 8), token, nome, online: true };
+    const jogador = { id: crypto.randomUUID().slice(0, 8), token, nome, online: true, voz: null, vozSocket: null, envios: [] };
     sala.jogadores.push(jogador);
     return jogador;
   }
@@ -53,7 +58,10 @@ function criarGerenciador(opcoes) {
     nome = limparNome(nome);
     if (!token) return erro('Aparelho sem identificação. Recarregue a página.');
     if (!nome) return erro('Digite seu nome.');
-    const sala = { codigo: novoCodigo(), jogadores: [], anfitriaoId: null, jogo: null, dadorId: null, rodadaDoDador: 0 };
+    const sala = {
+      codigo: novoCodigo(), jogadores: [], anfitriaoId: null, jogo: null, dadorId: null, rodadaDoDador: 0,
+      chat: [], seqMensagem: 0
+    };
     const jogador = novoJogador(sala, token, nome);
     sala.anfitriaoId = jogador.id;
     salas.set(sala.codigo, sala);
@@ -84,7 +92,11 @@ function criarGerenciador(opcoes) {
     const sala = salas.get(codigo);
     if (!sala) return null;
     const jogador = acharJogador(sala, token);
-    if (jogador) jogador.online = false;
+    if (jogador) {
+      jogador.online = false;
+      jogador.voz = null;
+      jogador.vozSocket = null;
+    }
     if (sala.jogadores.every((j) => !j.online)) return sala; // index.js agenda a limpeza
     garantirDador(sala);
     garantirAnfitriao(sala);
@@ -179,6 +191,66 @@ function criarGerenciador(opcoes) {
     return Object.assign({ sala }, resultado);
   }
 
+  /**
+   * Mensagem do chat. Só vai para quem está na mesma sala (o index.js manda para o canal da sala).
+   * Texto limpo de caracteres de controle, até 200 letras, e um limite de envios contra spam.
+   */
+  function enviarMensagem(codigo, token, texto, agora) {
+    agora = agora || Date.now();
+    const sala = salas.get(codigo);
+    if (!sala) return erro('Sala não encontrada.');
+    const jogador = acharJogador(sala, token);
+    if (!jogador) return erro('Você não está nesta sala.');
+    // Como no jogo de mesa, quem dá a pista não pode dar dicas extras enquanto a carta está em jogo.
+    if (sala.jogo && jogador.id === sala.dadorId && sala.jogo.visao().fase !== Game.FASE.FIM) {
+      return erro('Você está dando a pista: o chat volta quando a turma chutar.');
+    }
+    if (typeof texto !== 'string') return erro('Mensagem inválida.');
+    texto = texto.replace(/[\u0000-\u001f\u007f\u200b-\u200f\u2028-\u202e]/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!texto) return erro('Escreva alguma coisa.');
+    if (texto.length > TAMANHO_MAX_MENSAGEM) return erro('Mensagem longa demais (até ' + TAMANHO_MAX_MENSAGEM + ' letras).');
+    jogador.envios = jogador.envios.filter((t) => agora - t < JANELA_MENSAGENS_MS);
+    if (jogador.envios.length >= LIMITE_MENSAGENS) return erro('Calma! Espere um pouquinho para mandar outra.');
+    jogador.envios.push(agora);
+    const mensagem = { id: ++sala.seqMensagem, autorId: jogador.id, nome: jogador.nome, texto, em: agora };
+    sala.chat.push(mensagem);
+    if (sala.chat.length > HISTORICO_CHAT) sala.chat.shift();
+    return { ok: true, sala, mensagem };
+  }
+
+  /** Entrar, sair ou mudar o microfone na conversa por voz da sala. `socketId` é o aparelho que fala. */
+  function definirVoz(codigo, token, estado, socketId) {
+    const sala = salas.get(codigo);
+    if (!sala) return erro('Sala não encontrada.');
+    const jogador = acharJogador(sala, token);
+    if (!jogador) return erro('Você não está nesta sala.');
+    if (estado !== null && ESTADOS_VOZ.indexOf(estado) === -1) return erro('Estado de voz inválido.');
+    jogador.voz = estado;
+    jogador.vozSocket = estado ? socketId : null;
+    return { ok: true, sala };
+  }
+
+  /** O aparelho que estava na voz caiu: tira a pessoa da voz (ela volta sozinha ao reconectar). */
+  function vozCaiu(codigo, socketId) {
+    const sala = salas.get(codigo);
+    if (!sala) return null;
+    const jogador = sala.jogadores.find((j) => j.vozSocket === socketId);
+    if (!jogador) return null;
+    jogador.voz = null;
+    jogador.vozSocket = null;
+    return sala;
+  }
+
+  /** Para quem repassar um sinal de voz: os dois precisam estar na voz e na mesma sala. */
+  function destinoDoSinal(codigo, token, paraId) {
+    const sala = salas.get(codigo);
+    if (!sala) return null;
+    const de = acharJogador(sala, token);
+    const para = sala.jogadores.find((j) => j.id === paraId);
+    if (!de || !de.voz || !para || !para.voz || !para.vozSocket || para === de) return null;
+    return { deId: de.id, socketId: para.vozSocket };
+  }
+
   /** Tudo o que um jogador pode ver: a sala e a partida do ponto de vista dele. */
   function visaoPara(sala, token) {
     const eu = acharJogador(sala, token);
@@ -189,7 +261,7 @@ function criarGerenciador(opcoes) {
         anfitriaoId: sala.anfitriaoId,
         dadorId: sala.dadorId,
         euId: eu ? eu.id : null,
-        jogadores: sala.jogadores.map((j) => ({ id: j.id, nome: j.nome, online: j.online }))
+        jogadores: sala.jogadores.map((j) => ({ id: j.id, nome: j.nome, online: j.online, voz: j.voz }))
       },
       jogo: sala.jogo ? sala.jogo.visao(souDador ? 'dador' : 'grupo') : null
     };
@@ -204,9 +276,14 @@ function criarGerenciador(opcoes) {
     iniciar,
     agir,
     visaoPara,
+    enviarMensagem,
+    definirVoz,
+    vozCaiu,
+    destinoDoSinal,
+    historicoChat: (codigo) => (salas.get(codigo) ? salas.get(codigo).chat.slice() : []),
     obter: (codigo) => salas.get(codigo),
     total: () => salas.size
   };
 }
 
-module.exports = { criarGerenciador, MAX_JOGADORES };
+module.exports = { criarGerenciador, MAX_JOGADORES, TAMANHO_MAX_MENSAGEM };
