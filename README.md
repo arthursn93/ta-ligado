@@ -20,7 +20,24 @@ Abra `http://localhost:3000`, digite seu nome e crie uma sala. Mande o código d
 - Quem recarregar a página ou perder a conexão volta para o mesmo lugar. Se o dador cair antes de dar a pista, a vez passa para o próximo.
 - O servidor é o juiz: as regras rodam só nele, e cada aparelho recebe apenas o que pode ver.
 
-Para jogar com gente de fora da sua rede, publique o servidor em qualquer hospedagem de Node com WebSocket (Render, Railway, Fly.io...). O comando de início é `npm start` e a porta vem da variável `PORT`.
+Para jogar com gente de fora da sua rede, publique o servidor (veja abaixo).
+
+## Publicar no Render
+
+O repositório já vem com o `render.yaml`, então o Render configura tudo sozinho:
+
+1. Entre em [render.com](https://render.com) com sua conta do GitHub.
+2. Clique em **New > Blueprint** e escolha o repositório `ta-ligado`.
+3. Confirme em **Apply**. O Render roda `npm install`, depois `npm start`, e mostra o link público (algo como `https://ta-ligado.onrender.com`).
+
+Mande esse link para a turma. Cada um abre no navegador do celular ou do computador, sem instalar nada. Cada novo push no `main` publica uma versão nova.
+
+Se preferir criar à mão (**New > Web Service**): Runtime `Node`, Build Command `npm install`, Start Command `npm start`, Health Check Path `/saude`. Não precisa definir `PORT`; o Render passa a porta e o servidor usa.
+
+Bom saber sobre o plano gratuito:
+
+- O serviço dorme depois de um tempo sem visitas. O primeiro acesso depois disso demora cerca de um minuto para acordar.
+- As salas ficam na memória do servidor. Se ele dormir, reiniciar ou receber uma versão nova, as salas abertas somem e a turma cria outra (o jogo volta sozinho para a tela inicial).
 
 ### Num aparelho só
 

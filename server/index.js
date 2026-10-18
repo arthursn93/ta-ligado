@@ -37,6 +37,12 @@ function criarServidor(opcoes) {
   const tempoSalaVazia = opcoes.tempoSalaVazia || TEMPO_SALA_VAZIA_MS;
 
   const servidorHttp = http.createServer((req, res) => {
+    // Verificação de saúde da hospedagem (Render): responde rápido, sem tocar no disco.
+    if (req.url === '/saude') {
+      res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' });
+      res.end('ok');
+      return;
+    }
     const arquivo = arquivoPublico(req.url || '/');
     if (req.method !== 'GET' || !arquivo) {
       res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
@@ -142,8 +148,16 @@ function criarServidor(opcoes) {
 module.exports = { criarServidor };
 
 if (require.main === module) {
+  // Na hospedagem a porta vem de PORT; em casa, 3000.
   const porta = Number(process.env.PORT) || 3000;
-  criarServidor().servidorHttp.listen(porta, () => {
-    console.log('Tá Ligado? rodando em http://localhost:' + porta);
+  const { servidorHttp, io } = criarServidor();
+  servidorHttp.listen(porta, () => {
+    console.log('Tá Ligado? ouvindo na porta ' + porta + (process.env.PORT ? '' : ' (http://localhost:' + porta + ')'));
+  });
+  // A hospedagem manda SIGTERM antes de trocar de versão: fecha as conexões sem travar.
+  process.on('SIGTERM', () => {
+    io.close();
+    servidorHttp.close(() => process.exit(0));
+    setTimeout(() => process.exit(0), 5000).unref();
   });
 }
