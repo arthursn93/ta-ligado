@@ -1,0 +1,13 @@
+# Blueprint do Render: no painel, New > Blueprint e escolha este repositório.
+services:
+  - type: web
+    name: ta-ligado
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /saude
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"

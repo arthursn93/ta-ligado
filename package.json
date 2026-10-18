@@ -8,7 +8,7 @@
     "test": "node --test testes/*.test.js"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "dependencies": {
     "socket.io": "^4.8.1"

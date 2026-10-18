@@ -37,6 +37,7 @@ test('serve só os arquivos do jogo', async (t) => {
   assert.equal(await get(srv.url + '/package.json'), 404);
   assert.equal(await get(srv.url + '/js/../server/Salas.js'), 404);
   assert.equal(await get(srv.url + '/socket.io/socket.io.js'), 200);
+  assert.equal(await get(srv.url + '/saude'), 200);
 });
 
 test('três aparelhos jogam: segredo só para o dador, permissões e reconexão', async (t) => {
