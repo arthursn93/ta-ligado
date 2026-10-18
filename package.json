@@ -1,0 +1,19 @@
+{
+  "name": "ta-ligado",
+  "version": "0.2.0",
+  "description": "Tá Ligado? — jogo cooperativo de associação de palavras, com salas online.",
+  "private": true,
+  "scripts": {
+    "start": "node server/index.js",
+    "test": "node --test testes/*.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.8.1"
+  }
+}

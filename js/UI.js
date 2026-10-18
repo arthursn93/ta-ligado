@@ -8,6 +8,12 @@
  *   palpite   → grupo vê a pista, seleciona um quadrado e confirma
  *   resultado → mostra acerto/erro no painel; "Próxima rodada" volta para passar
  *   fim       → placar final (pode ser fechado para ver o tabuleiro: etapa 'encerrada')
+ *
+ * Modo online (`opcoes.online`): `jogo` é a Rede, cada um joga no seu aparelho e a etapa sai do
+ * estado que o servidor manda. Não existe 'passar'; aparecem:
+ *   aguardando   → outra pessoa está pensando na pista
+ *   assistindo   → eu dei a pista e a turma está escolhendo
+ *   dador-oculto → sou o dador e escondi a carta para olhar o tabuleiro
  */
 var UI = (function () {
   'use strict';
@@ -25,6 +31,7 @@ var UI = (function () {
     '  </div>',
     '  <button class="botao botao-fantasma" data-acao="nova-pedir">Nova partida</button>',
     '</header>',
+    '<section class="barra-sala" hidden></section>',
     '<section class="faixa-pista" aria-live="polite"></section>',
     '<section class="tabuleiro"><div class="grade" role="grid" aria-label="Tabuleiro 5 por 5"></div></section>',
     '<section class="painel" aria-live="polite"></section>',
@@ -54,8 +61,14 @@ var UI = (function () {
     };
   }
 
-  function criar(raiz, jogo) {
+  function criar(raiz, jogo, opcoes) {
+    opcoes = opcoes || {};
+    var online = !!opcoes.online;
     var etapa = 'passar';
+    var jogadasVistas = -1; // online: tamanho do histórico na última atualização
+    var enviando = false;
+    var avisoPainel = '';
+    var barraAtual = null;
     var selecionada = null;
     var emFoco = null; // hover no desktop
     var confirmandoNova = false;
@@ -65,6 +78,8 @@ var UI = (function () {
 
     raiz.innerHTML = MOLDE;
     var el = {
+      nova: raiz.querySelector('.topo [data-acao="nova-pedir"]'),
+      barra: raiz.querySelector('.barra-sala'),
       rodada: raiz.querySelector('.placar-rodada'),
       acertos: raiz.querySelector('.pilula-acerto'),
       erros: raiz.querySelector('.pilula-erro'),
@@ -161,29 +176,41 @@ var UI = (function () {
           etapa = 'dador';
           break;
         case 'voltar-passar':
-          etapa = 'passar';
+          etapa = online ? 'dador-oculto' : 'passar';
           break;
         case 'confirmar-pista': {
           var campo = el.modal.querySelector('input[name="pista"]');
-          var r = jogo.executar({ tipo: 'DAR_PISTA', pista: campo ? campo.value : '' });
-          if (!r.ok) { mostrarErroPista(r.erro); return; }
-          etapa = 'palpite';
-          selecionada = null;
-          break;
+          enviar({ tipo: 'DAR_PISTA', pista: campo ? campo.value : '' }, function (r) {
+            if (!r.ok) { mostrarErroPista(r.erro); return; }
+            if (online) return; // a tela muda quando o servidor mandar o novo estado
+            etapa = 'palpite';
+            selecionada = null;
+            render();
+          });
+          return;
         }
         case 'confirmar-palpite': {
           if (!selecionada || v.celulas[selecionada] !== null) return;
-          var res = jogo.executar({ tipo: 'CHUTAR', coordenada: selecionada });
-          if (!res.ok) return;
-          etapa = 'resultado';
-          selecionada = null;
-          if (jogo.visao().ultimaJogada.acertou) confete(40);
-          break;
+          enviar({ tipo: 'CHUTAR', coordenada: selecionada }, function (res) {
+            if (!res.ok) {
+              if (online && etapa === 'palpite') { avisoPainel = res.erro; render(); }
+              return;
+            }
+            if (online) return;
+            etapa = 'resultado';
+            selecionada = null;
+            if (jogo.visao().ultimaJogada.acertou) confete(40);
+            render();
+          });
+          return;
         }
         case 'proxima':
-          etapa = v.fase === Game.FASE.FIM ? 'fim' : 'passar';
+          etapa = online ? etapaDoEstado(v) : v.fase === Game.FASE.FIM ? 'fim' : 'passar';
           if (etapa === 'fim' && v.vitoriaMaxima) confete(120);
           break;
+        case 'sair-sala':
+          opcoes.aoSair();
+          return;
         case 'fechar-fim':
           etapa = 'encerrada';
           break;
@@ -208,10 +235,84 @@ var UI = (function () {
     }
 
     function novaPartida() {
-      jogo.executar({ tipo: 'NOVA_PARTIDA' });
       confirmandoNova = false;
       selecionada = null;
+      if (online) {
+        // O servidor só aceita do anfitrião; a tela reinicia quando chegar o estado novo.
+        enviar({ tipo: 'NOVA_PARTIDA' }, function () {});
+        return;
+      }
+      jogo.executar({ tipo: 'NOVA_PARTIDA' });
       etapa = 'passar';
+    }
+
+    /** Envia uma ação. No modo local a resposta vem na hora; no online, quando o servidor responde. */
+    function enviar(acao, depois) {
+      if (enviando) return;
+      var r = jogo.executar(acao);
+      if (!r || typeof r.then !== 'function') { depois(r); return; }
+      enviando = true;
+      r.then(function (res) { enviando = false; depois(res); });
+    }
+
+    // ---------- Modo online ----------
+
+    function souDador() {
+      return online && jogo.souDador();
+    }
+
+    function etapaDoEstado(v) {
+      if (v.fase === Game.FASE.FIM) return 'fim';
+      if (v.fase === Game.FASE.PISTA) return souDador() ? 'dador' : 'aguardando';
+      return souDador() ? 'assistindo' : 'palpite';
+    }
+
+    function nomeDoDador() {
+      var dador = jogo.jogador(jogo.sala().dadorId);
+      return dador ? dador.nome : 'Alguém';
+    }
+
+    /** Chegou estado novo do servidor: decide a etapa da tela deste aparelho. */
+    function aoMudarOnline() {
+      var v = jogo.visao();
+      if (!v) return;
+      var jogadas = v.historico.length;
+      if (jogadasVistas >= 0 && jogadas < jogadasVistas) {
+        // O anfitrião começou outra partida.
+        etapa = null;
+        selecionada = null;
+        confirmandoNova = false;
+      } else if (jogadasVistas >= 0 && jogadas > jogadasVistas) {
+        // Alguém chutou: todo mundo vê o resultado da carta.
+        etapa = 'resultado';
+        selecionada = null;
+        if (v.ultimaJogada && v.ultimaJogada.acertou) confete(40);
+      }
+      jogadasVistas = jogadas;
+      if (v.fase !== Game.FASE.PALPITE) avisoPainel = '';
+
+      var fica = etapa === 'resultado' ||
+        (etapa === 'encerrada' && v.fase === Game.FASE.FIM) ||
+        (etapa === 'dador-oculto' && v.fase === Game.FASE.PISTA && souDador());
+      if (!fica) etapa = etapaDoEstado(v);
+      render();
+    }
+
+    function renderBarra() {
+      if (!online) return;
+      var sala = jogo.sala();
+      var html = '<span class="barra-codigo">Sala <b>' + esc(sala.codigo) + '</b></span>' +
+        '<ul class="barra-jogadores">' + sala.jogadores.map(function (j) {
+          var classes = (j.online ? '' : ' is-offline') + (j.id === sala.dadorId ? ' is-dador' : '') + (j.id === sala.euId ? ' is-eu' : '');
+          return '<li class="chip' + classes + '" title="' + esc(j.nome) +
+            (j.id === sala.dadorId ? ' está dando a pista' : '') + (j.online ? '' : ' (desconectado)') + '">' +
+            (j.id === sala.dadorId ? '<span aria-hidden="true">🎤</span> ' : '') + esc(j.nome) +
+            (j.id === sala.anfitriaoId ? ' <span aria-label="anfitrião">👑</span>' : '') + '</li>';
+        }).join('') + '</ul>' +
+        (jogo.conectado() ? '' : '<span class="chip chip-alerta">Reconectando…</span>') +
+        '<button class="botao botao-fantasma botao-pequeno" data-acao="sair-sala">Sair</button>';
+      if (barraAtual !== html) { barraAtual = html; el.barra.innerHTML = html; }
+      el.barra.hidden = false;
     }
 
     function mostrarErroPista(mensagem) {
@@ -230,6 +331,9 @@ var UI = (function () {
 
     function render() {
       var v = jogo.visao(etapa === 'dador' ? 'dador' : 'grupo');
+      if (!v) return;
+      if (online) el.nova.hidden = !jogo.souAnfitriao();
+      renderBarra();
       renderPlacar(v);
       renderFaixa(v);
       renderGrade(v);
@@ -248,7 +352,8 @@ var UI = (function () {
     function renderFaixa(v) {
       var html;
       // No resultado a carta seguinte já foi comprada, então a pista exibida vem da última jogada.
-      var pista = etapa === 'resultado' && v.ultimaJogada ? v.ultimaJogada.pista : etapa === 'palpite' ? v.pista : null;
+      var pista = etapa === 'resultado' && v.ultimaJogada ? v.ultimaJogada.pista
+        : etapa === 'palpite' || etapa === 'assistindo' ? v.pista : null;
       if (pista) {
         html = '<span class="faixa-rotulo">Pista</span><span class="faixa-palavra">' + esc(pista) + '</span>';
       } else if (v.fase === Game.FASE.FIM) {
@@ -334,7 +439,8 @@ var UI = (function () {
           '<button class="botao botao-primario" data-acao="proxima">' + (fim ? 'Ver resultado' : 'Próxima carta') + '</button>';
       } else if (etapa === 'palpite') {
         var podeConfirmar = selecionada && v.celulas[selecionada] === null;
-        var dica = selecionada && !podeConfirmar ? '<div class="painel-detalhe">Esse quadrado já foi resolvido.</div>' : '';
+        var dica = selecionada && !podeConfirmar ? '<div class="painel-detalhe">Esse quadrado já foi resolvido.</div>'
+          : avisoPainel ? '<div class="painel-detalhe txt-erro">' + esc(avisoPainel) + '</div>' : '';
         html =
           '<div class="painel-info">' +
             (ativa ? blocoPalavras(v, ativa, dica)
@@ -346,11 +452,30 @@ var UI = (function () {
         html =
           '<div class="painel-info">' + (ativa ? blocoPalavras(v, ativa)
             : '<div class="painel-detalhe">Você acertou ' + v.acertos + ' de ' + v.totalCartas + ' coordenadas.</div>') + '</div>' +
-          '<button class="botao botao-primario" data-acao="nova-confirmar">Jogar de novo</button>';
+          (podeRecomecar() ? '<button class="botao botao-primario" data-acao="nova-confirmar">Jogar de novo</button>' : '');
+      } else if (etapa === 'assistindo') {
+        html = '<div class="painel-info">' + (ativa ? blocoPalavras(v, ativa)
+          : '<div class="painel-detalhe">Você deu a pista <b>' + esc(v.pista) + '</b>. Agora é com a turma!</div>') + '</div>';
+      } else if (etapa === 'dador-oculto') {
+        html = '<div class="painel-info">' + (ativa ? blocoPalavras(v, ativa)
+          : '<div class="painel-detalhe">Sua vez de dar a pista. Olhe o tabuleiro com calma.</div>') + '</div>' +
+          '<button class="botao botao-primario" data-acao="ver-coordenada">Ver minha carta</button>';
+      } else if (etapa === 'aguardando') {
+        html = '<div class="painel-info">' + (ativa ? blocoPalavras(v, ativa)
+          : '<div class="painel-detalhe"><b>' + esc(nomeDoDador()) + '</b> está pensando na pista. Vá estudando o tabuleiro.</div>') + '</div>';
       } else {
         html = '<div class="painel-info"><div class="painel-detalhe">Aguardando a pista…</div></div>';
       }
       if (painelAtual !== html) { painelAtual = html; el.painel.innerHTML = html; }
+    }
+
+    function podeRecomecar() {
+      return !online || jogo.souAnfitriao();
+    }
+
+    function esperandoAnfitriao() {
+      var anfitriao = jogo.jogador(jogo.sala().anfitriaoId);
+      return '<p class="suave">Esperando ' + esc(anfitriao ? anfitriao.nome : 'o anfitrião') + ' começar outra partida.</p>';
     }
 
     function miniMapa(v, secreta) {
@@ -403,7 +528,7 @@ var UI = (function () {
             '<input id="campo-pista" name="pista" type="text" maxlength="30" autocapitalize="none" spellcheck="false" placeholder="Sua pista">' +
             '<div class="erro-campo" role="alert"></div>' +
             '<div class="acoes">' +
-              '<button type="button" class="botao botao-fantasma" data-acao="voltar-passar">Esconder</button>' +
+              '<button type="button" class="botao botao-fantasma" data-acao="voltar-passar">' + (online ? 'Ver tabuleiro' : 'Esconder') + '</button>' +
               '<button type="submit" class="botao botao-primario">Confirmar pista</button>' +
             '</div>' +
           '</form>';
@@ -418,12 +543,14 @@ var UI = (function () {
             : 'Você acertou ' + v.acertos + ' de ' + v.totalCartas + ' coordenadas!') + '</h2>' +
           '<div class="acoes">' +
             '<button class="botao botao-fantasma" data-acao="fechar-fim">Ver tabuleiro</button>' +
-            '<button class="botao botao-primario" data-acao="nova-confirmar">Jogar de novo</button>' +
-          '</div>';
+            (podeRecomecar() ? '<button class="botao botao-primario" data-acao="nova-confirmar">Jogar de novo</button>' : '') +
+          '</div>' +
+          (podeRecomecar() ? '' : esperandoAnfitriao());
       }
 
       if (!conteudo) {
         el.sobreposicao.hidden = true;
+        el.modal.innerHTML = ''; // não deixa a carta secreta escondida no HTML
         chaveModal = null;
         return;
       }
@@ -456,7 +583,12 @@ var UI = (function () {
       setTimeout(function () { camada.remove(); }, 3000);
     }
 
-    render();
+    if (online) {
+      jogo.assinar(aoMudarOnline);
+      aoMudarOnline();
+    } else {
+      render();
+    }
     return { render: render };
   }
 
