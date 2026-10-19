@@ -9,10 +9,10 @@
   <meta name="theme-color" content="#f7f8fc">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chewy&family=Nunito:wght@600;700;800;900&display=swap">
   <style>
     /* Mesmas cores do style.css do jogo (tokens da paleta Playful & Friendly). */
-    :root { --fundo: #f7f8fc; --superficie: #fff; --texto: #283047; --texto-suave: #5b6478; --primaria: #6558d3; --primaria-escura: #4b3fb8; }
+    :root { --fundo: #f7f8fc; --superficie: #fff; --superficie-suave: #eeedfb; --texto: #283047; --texto-suave: #5b6478; --primaria: #6558d3; --primaria-escura: #4b3fb8; --destaque: #ffd166; --sucesso: #58c98d; --perigo: #ff887a; }
     * { box-sizing: border-box; }
     body {
       margin: 0;
@@ -25,21 +25,63 @@
       font: 600 17px/1.6 'Nunito', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     }
     main { max-width: 720px; margin: 0 auto; padding: 24px 16px 48px; }
-    article { background: var(--superficie); border-radius: 24px; box-shadow: 0 12px 32px rgba(40, 48, 71, 0.12); padding: 8px 28px 28px; }
-    h1 { color: var(--primaria); font-size: 30px; font-weight: 900; line-height: 1.2; }
-    h2 { font-size: 20px; font-weight: 900; margin-top: 28px; }
+    /* Cartão com borda roxa e "sombra de carta", como os botões do jogo, e uma faixa de cores no topo. */
+    article {
+      position: relative;
+      overflow: hidden;
+      background: var(--superficie);
+      border: 3px solid var(--primaria);
+      border-radius: 24px;
+      box-shadow: 0 6px 0 var(--primaria-escura), 0 18px 40px rgba(40, 48, 71, 0.14);
+      padding: 22px 28px 28px;
+    }
+    article::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 8px;
+      background: linear-gradient(90deg, var(--primaria) 0 25%, var(--sucesso) 25% 50%, var(--destaque) 50% 75%, var(--perigo) 75%);
+    }
+    .marca {
+      display: inline-block;
+      margin: 8px 0 0;
+      font: 400 34px/1 'Chewy', 'Comic Sans MS', cursive;
+      color: #fff;
+      -webkit-text-stroke: 6px var(--primaria);
+      paint-order: stroke fill;
+      text-shadow: 0 4px 0 var(--primaria-escura);
+      transform: rotate(-2deg);
+      text-decoration: none;
+    }
+    .marca span { color: var(--destaque); }
+    h1 { margin: 18px 0 4px; color: var(--primaria); font-size: 30px; font-weight: 900; line-height: 1.2; }
+    h2 { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 900; margin: 32px 0 10px; }
+    h2::before { content: ''; flex: none; width: 12px; height: 12px; border-radius: 4px; background: var(--destaque); box-shadow: 0 0 0 3px var(--superficie-suave); transform: rotate(45deg); }
+    ul { padding-left: 0; list-style: none; }
+    li { position: relative; margin: 0 0 10px; padding: 12px 14px 12px 40px; border-radius: 14px; background: var(--fundo); }
+    li::before { content: ''; position: absolute; left: 16px; top: 22px; width: 10px; height: 10px; border-radius: 50%; background: var(--primaria); }
     strong { font-weight: 800; }
     a { color: var(--primaria); font-weight: 800; }
     a:hover { color: var(--primaria-escura); }
     a:focus-visible { outline: 3px solid var(--texto); outline-offset: 2px; border-radius: 4px; }
-    .voltar { display: inline-flex; align-items: center; min-height: 44px; margin-bottom: 8px; }
+    .topo { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+    .voltar {
+      display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px;
+      border-radius: 16px; background: var(--superficie); color: var(--primaria);
+      box-shadow: inset 0 0 0 2px var(--primaria), 0 4px 0 rgba(40, 48, 71, 0.12);
+      text-decoration: none;
+    }
+    .voltar:hover { color: var(--primaria-escura); background: var(--superficie-suave); }
     .suave { font-size: 15px; color: var(--texto-suave); }
-    @media (max-width: 560px) { article { padding: 4px 18px 20px; } h1 { font-size: 26px; } }
+    @media (max-width: 560px) { article { padding: 18px 16px 20px; } h1 { font-size: 26px; } .marca { font-size: 28px; -webkit-text-stroke-width: 5px; } li { padding-right: 12px; } }
   </style>
 </head>
 <body>
   <main>
-    <a class="voltar" href="/">← Voltar para o jogo</a>
+    <div class="topo">
+      <a class="marca" href="/" aria-label="Tá Ligado?, voltar para o jogo">Tá <span>Ligado?</span></a>
+      <a class="voltar" href="/">← Voltar para o jogo</a>
+    </div>
     <article>
       <h1>Privacidade e termos de uso</h1>
       <p class="suave">Última atualização: outubro de 2026.</p>
