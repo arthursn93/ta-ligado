@@ -19,6 +19,7 @@ Abra `http://localhost:3000`, digite seu nome e crie uma sala. Mande o código d
 - Qualquer outra pessoa da sala pode escolher o quadrado e confirmar o palpite.
 - Quem recarregar a página ou perder a conexão volta para o mesmo lugar. Se o dador cair antes de dar a pista, a vez passa para o próximo.
 - O servidor é o juiz: as regras rodam só nele, e cada aparelho recebe apenas o que pode ver.
+- No fim da partida, o placar mostra o XP que cada um ganhou, as conquistas novas e a barra do nível. O botão **Meu perfil** (na tela inicial, na sala e no fim da partida) mostra estatísticas, conquistas, itens e as últimas partidas, e é onde se escolhe título, moldura e cor do tabuleiro. Isso precisa do banco de dados (veja abaixo).
 
 ### Chat e voz
 
@@ -92,9 +93,20 @@ As conquistas (14, em `server/progressao/catalogo.js`) desbloqueiam uma vez só,
 
 As recompensas são só visuais: títulos, molduras do nome e cores do tabuleiro, liberados por nível ou por conquista. Nenhuma muda pista, tempo ou o que cada um vê do tabuleiro. Quem escolhe um item é o aparelho, mas o servidor confere se ele está liberado antes de salvar.
 
+### Variáveis de ambiente
+
+Nenhuma é obrigatória. Todas ficam em **Environment** no painel do Render, nunca no repositório.
+
+| Variável | Para quê |
+| --- | --- |
+| `DATABASE_URL` | PostgreSQL do histórico, XP, conquistas e perfil. Sem ela o jogo funciona, mas sem progressão. |
+| `ORIGENS_PERMITIDAS` | Outros endereços que podem conectar no servidor, separados por vírgula. |
+| `TURN_URL`, `TURN_USERNAME`, `TURN_CREDENTIAL` | Servidor TURN para a voz em redes fechadas. |
+| `PORT` | Porta do servidor. O Render define sozinho; em casa o padrão é 3000. |
+
 ### Num aparelho só
 
-Abra o `index.html` direto no navegador (dois cliques, sem servidor) e o aparelho vai passando de mão em mão. Com o servidor rodando, essa opção também aparece na tela inicial: **Jogar num aparelho só**.
+Abra o `index.html` direto no navegador (dois cliques, sem servidor) e o aparelho vai passando de mão em mão. Com o servidor rodando, essa opção também aparece na tela inicial: **Jogar num aparelho só**. Partidas num aparelho só não rendem XP nem entram no histórico.
 
 ## Estrutura
 
@@ -107,6 +119,7 @@ Abra o `index.html` direto no navegador (dois cliques, sem servidor) e o aparelh
 | `js/UI.js` | Interface: grade, painel, fluxo de passar o aparelho e modo online. |
 | `js/Lobby.js` | Tela de entrada online: criar sala, entrar com código, sala de espera. |
 | `js/Social.js` | Chat e voz da sala (WebRTC de aparelho para aparelho, sinalização pelo Socket.io). |
+| `js/Progresso.js` | XP no placar final, selo de nível ao lado do nome e a tela **Meu perfil**. Só mostra o que o servidor manda. |
 | `js/Rede.js` | Cliente Socket.io com a mesma interface do `Game` (`visao`, `executar`, `assinar`). |
 | `server/index.js` | Servidor HTTP + Socket.io. Serve só os arquivos do jogo, com limites contra abuso. |
 | `server/Salas.js` | Salas por código, anfitrião, rodízio do dador, permissões e reconexão. |
