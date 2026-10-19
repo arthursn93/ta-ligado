@@ -16,6 +16,10 @@ var Lobby = (function () {
     return m ? m[1].toUpperCase() : '';
   }
 
+  function avisoDaUrl() {
+    return /[?&]aviso=sala-encerrada\b/.test(window.location.search);
+  }
+
   function linkConvite(codigo) {
     return window.location.origin + window.location.pathname + '?sala=' + codigo;
   }
@@ -24,6 +28,7 @@ var Lobby = (function () {
     '<div class="lobby">',
     '  <h1 class="marca marca-grande">Tá <span>Ligado?</span></h1>',
     '  <p class="lobby-sub">Uma palavra liga duas. Joguem juntos, cada um no seu aparelho.</p>',
+    '  <p class="lobby-aviso" role="status" hidden>A sala foi encerrada porque o servidor reiniciou. Crie uma sala nova ou entre com outro código.</p>',
     '  <form class="cartao-modal lobby-cartao" data-form="entrar" autocomplete="off">',
     '    <label class="lobby-rotulo" for="lobby-nome">Seu nome</label>',
     '    <input class="lobby-campo" id="lobby-nome" name="nome" maxlength="20" placeholder="Como te chamam?">',
@@ -39,6 +44,7 @@ var Lobby = (function () {
     '    <div class="erro-campo" role="alert"></div>',
     '  </form>',
     '  <button type="button" class="botao botao-fantasma" data-lobby="local">Jogar num aparelho só</button>',
+    '  <a class="lobby-rodape" href="privacidade.html">Privacidade e termos de uso</a>',
     '</div>'
   ].join('');
 
@@ -78,6 +84,7 @@ var Lobby = (function () {
           raiz.innerHTML = MOLDE_INICIO;
           raiz.querySelector('[name="nome"]').value = rede.nomeSalvo();
           raiz.querySelector('[name="codigo"]').value = codigoDaUrl();
+          raiz.querySelector('.lobby-aviso').hidden = !(rede.salaEncerrada() || avisoDaUrl());
           var foco = rede.nomeSalvo() ? (codigoDaUrl() ? '[data-lobby="entrar"]' : '[name="codigo"]') : '[name="nome"]';
           raiz.querySelector(foco).focus();
         } else if (tela === 'sala') {

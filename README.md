@@ -46,7 +46,16 @@ Se preferir criar à mão (**New > Web Service**): Runtime `Node`, Build Command
 Bom saber sobre o plano gratuito:
 
 - O serviço dorme depois de um tempo sem visitas. O primeiro acesso depois disso demora cerca de um minuto para acordar.
-- As salas ficam na memória do servidor. Se ele dormir, reiniciar ou receber uma versão nova, as salas abertas somem e a turma cria outra (o jogo volta sozinho para a tela inicial).
+- As salas ficam na memória do servidor. Se ele dormir, reiniciar ou receber uma versão nova, as salas abertas somem: o jogo volta sozinho para a tela inicial com o aviso "A sala foi encerrada" e a turma cria outra.
+- Enquanto o servidor acorda, a tela mostra "Conectando ao servidor…". Se depois de 1 minuto não der, aparece a opção de tentar de novo ou jogar num aparelho só.
+
+### Proteções do servidor
+
+- Cada endereço de IP pode ter até 60 conexões ao mesmo tempo, criar até 10 salas por minuto e errar o código da sala até 10 vezes por minuto (os números ficam em `LIMITES`, no `server/index.js`).
+- Só páginas do próprio site conectam no servidor. Para liberar outro endereço (por exemplo, um app de celular no futuro), defina `ORIGENS_PERMITIDAS` com os endereços separados por vírgula.
+- Um erro inesperado num evento é registrado no log e respondido com "Algo deu errado", sem derrubar as outras salas.
+- As páginas saem comprimidas (gzip) e com cabeçalhos de segurança (CSP, sem iframe de outros sites).
+- A página [privacidade.html](privacidade.html) explica o que o jogo guarda e as regras de uso; ela fica linkada na tela inicial.
 
 ### Num aparelho só
 
@@ -64,10 +73,12 @@ Abra o `index.html` direto no navegador (dois cliques, sem servidor) e o aparelh
 | `js/Lobby.js` | Tela de entrada online: criar sala, entrar com código, sala de espera. |
 | `js/Social.js` | Chat e voz da sala (WebRTC de aparelho para aparelho, sinalização pelo Socket.io). |
 | `js/Rede.js` | Cliente Socket.io com a mesma interface do `Game` (`visao`, `executar`, `assinar`). |
-| `server/index.js` | Servidor HTTP + Socket.io. Serve só os arquivos do jogo. |
+| `server/index.js` | Servidor HTTP + Socket.io. Serve só os arquivos do jogo, com limites contra abuso. |
 | `server/Salas.js` | Salas por código, anfitrião, rodízio do dador, permissões e reconexão. |
 | `js/Theme.js` | Skins de cor. |
 | `style.css` | Visual estilo jogo de cartas retrô. |
+| `privacidade.html` | Privacidade e termos de uso. |
+| `favicon.svg`, `icone-180.png`, `previa.png` | Ícone da aba, ícone do celular e imagem da prévia do link (WhatsApp etc.). |
 | `testes/` | Testes da lógica, das salas e do servidor. |
 
 Os scripts são carregados como scripts comuns (sem `import`) para o jogo abrir direto do disco. O mesmo `Game.js` roda no navegador (modo local) e no servidor (modo online).

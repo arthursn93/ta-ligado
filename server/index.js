@@ -22,12 +22,22 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
 const { Server } = require('socket.io');
 const { criarGerenciador } = require('./Salas.js');
 
 const RAIZ = path.join(__dirname, '..');
 const TEMPO_SALA_VAZIA_MS = 10 * 60 * 1000;
 const TAMANHO_MAX_SINAL = 20000;
+const TAMANHO_MAX_TOKEN = 100;
+const TAMANHO_MAX_MENSAGEM_SOCKET = 64 * 1024; // sinais de voz cabem com folga
+
+// Limites por endereço de IP, contra robôs e adivinhação de código de sala.
+const LIMITES = {
+  conexoes: 60,                                 // simultâneas (uma escola inteira no mesmo Wi-Fi cabe)
+  criar: { vezes: 10, janelaMs: 60 * 1000 },    // salas criadas por minuto
+  entrarErrado: { vezes: 10, janelaMs: 60 * 1000 } // códigos errados por minuto
+};
 
 /**
  * Servidores para o WebRTC achar o caminho entre aparelhos. STUN público resolve a maioria das redes;
@@ -61,20 +71,115 @@ function sinalValido(dados) {
 }
 
 // Só estes arquivos são servidos; nada do servidor nem do repositório vaza.
-const TIPOS = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8' };
+const TIPOS = {
+  '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
+  '.svg': 'image/svg+xml', '.png': 'image/png', '.webmanifest': 'application/manifest+json'
+};
+const ARQUIVOS_SOLTOS = ['style.css', 'privacidade.html', 'favicon.svg', 'icone-180.png', 'previa.png'];
 function arquivoPublico(url) {
-  const caminho = decodeURIComponent(url.split('?')[0]);
+  let caminho;
+  try { caminho = decodeURIComponent(url.split('?')[0]); } catch (e) { return null; } // URL malformada
   if (caminho === '/' || caminho === '/index.html') return 'index.html';
-  if (caminho === '/style.css') return 'style.css';
+  if (ARQUIVOS_SOLTOS.indexOf(caminho.slice(1)) !== -1) return caminho.slice(1);
   const js = /^\/js\/([A-Za-z]+\.js)$/.exec(caminho);
   return js ? 'js/' + js[1] : null;
+}
+
+// Cabeçalhos de segurança: o jogo só carrega o que é dele (mais as fontes do Google).
+const CABECALHOS_SEGURANCA = {
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'X-Frame-Options': 'DENY',
+  'Permissions-Policy': 'microphone=(self), camera=(), geolocation=()',
+  'Content-Security-Policy': [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src https://fonts.gstatic.com",
+    "img-src 'self' data:",
+    "connect-src 'self'",
+    "media-src 'self' blob:",
+    "frame-ancestors 'none'",
+    "base-uri 'none'",
+    "form-action 'none'"
+  ].join('; ')
+};
+
+/** Lê o arquivo e guarda a versão comprimida enquanto ele não mudar no disco. */
+const cacheArquivos = new Map();
+function lerArquivo(arquivo, pronto) {
+  const caminho = path.join(RAIZ, arquivo);
+  fs.stat(caminho, (err, info) => {
+    if (err) return pronto(err);
+    const guardado = cacheArquivos.get(arquivo);
+    if (guardado && guardado.mtime === info.mtimeMs) return pronto(null, guardado);
+    fs.readFile(caminho, (err2, conteudo) => {
+      if (err2) return pronto(err2);
+      const comprimivel = /\.(html|css|js|svg|webmanifest)$/.test(arquivo);
+      const item = { mtime: info.mtimeMs, conteudo, gzip: comprimivel ? zlib.gzipSync(conteudo) : null };
+      cacheArquivos.set(arquivo, item);
+      pronto(null, item);
+    });
+  });
+}
+
+/** Endereço público de quem pediu (atrás do Render, vem do proxy). */
+function origemPublica(req) {
+  const proto = String(req.headers['x-forwarded-proto'] || 'http').split(',')[0].trim();
+  return proto + '://' + req.headers.host;
+}
+
+/** IP de quem conectou. No Render o IP real vem no primeiro item de X-Forwarded-For. */
+function ipDe(req) {
+  const encaminhado = req.headers['x-forwarded-for'];
+  if (encaminhado) return String(encaminhado).split(',')[0].trim();
+  return (req.socket && req.socket.remoteAddress) || 'desconhecido';
+}
+
+/** Contador de eventos por chave numa janela de tempo. */
+function criarLimitador(limite) {
+  const registros = new Map();
+  return {
+    estourou(chave, agora) {
+      agora = agora || Date.now();
+      const lista = (registros.get(chave) || []).filter((t) => agora - t < limite.janelaMs);
+      registros.set(chave, lista);
+      return lista.length >= limite.vezes;
+    },
+    contar(chave, agora) {
+      const lista = registros.get(chave) || [];
+      lista.push(agora || Date.now());
+      registros.set(chave, lista);
+    },
+    limpar(agora) {
+      agora = agora || Date.now();
+      for (const [chave, lista] of registros) {
+        if (!lista.some((t) => agora - t < limite.janelaMs)) registros.delete(chave);
+      }
+    }
+  };
+}
+
+/** Só aceita conexões vindas do próprio site (ou das origens liberadas em ORIGENS_PERMITIDAS). */
+function origemPermitida(req, env) {
+  const origem = req.headers.origin;
+  if (!origem) return true; // apps nativos e testes não mandam Origin
+  const extras = String(env.ORIGENS_PERMITIDAS || '').split(',').map((o) => o.trim()).filter(Boolean);
+  if (extras.indexOf(origem) !== -1) return true;
+  try { return new URL(origem).host === req.headers.host; } catch (e) { return false; }
 }
 
 function criarServidor(opcoes) {
   opcoes = opcoes || {};
   const salas = criarGerenciador({ criarJogo: opcoes.criarJogo });
   const tempoSalaVazia = opcoes.tempoSalaVazia || TEMPO_SALA_VAZIA_MS;
-  const iceServers = servidoresIce(opcoes.env || process.env);
+  const env = opcoes.env || process.env;
+  const iceServers = servidoresIce(env);
+  const limites = Object.assign({}, LIMITES, opcoes.limites);
+  const limiteCriar = criarLimitador(limites.criar);
+  const limiteEntrar = criarLimitador(limites.entrarErrado);
+  const conexoesPorIp = new Map();
+  setInterval(() => { limiteCriar.limpar(); limiteEntrar.limpar(); }, 5 * 60 * 1000).unref();
 
   const servidorHttp = http.createServer((req, res) => {
     // Verificação de saúde da hospedagem (Render): responde rápido, sem tocar no disco.
@@ -89,18 +194,38 @@ function criarServidor(opcoes) {
       res.end('Não encontrado');
       return;
     }
-    fs.readFile(path.join(RAIZ, arquivo), (err, conteudo) => {
+    lerArquivo(arquivo, (err, item) => {
       if (err) {
         res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
         res.end('Não encontrado');
         return;
       }
-      res.writeHead(200, { 'Content-Type': TIPOS[path.extname(arquivo)], 'Cache-Control': 'no-cache' });
-      res.end(conteudo);
+      let corpo = item.conteudo;
+      let gzip = item.gzip;
+      if (arquivo === 'index.html') {
+        // A prévia do link (WhatsApp etc.) precisa do endereço completo da imagem.
+        corpo = Buffer.from(corpo.toString('utf8').split('{{ORIGEM}}').join(origemPublica(req)));
+        gzip = zlib.gzipSync(corpo);
+      }
+      const cabecalhos = Object.assign({ 'Content-Type': TIPOS[path.extname(arquivo)], 'Cache-Control': 'no-cache', Vary: 'Accept-Encoding' }, CABECALHOS_SEGURANCA);
+      if (gzip && /\bgzip\b/.test(req.headers['accept-encoding'] || '')) {
+        cabecalhos['Content-Encoding'] = 'gzip';
+        corpo = gzip;
+      }
+      res.writeHead(200, cabecalhos);
+      res.end(corpo);
     });
   });
 
-  const io = new Server(servidorHttp);
+  const io = new Server(servidorHttp, {
+    maxHttpBufferSize: TAMANHO_MAX_MENSAGEM_SOCKET,
+    allowRequest: (req, aceitar) => {
+      if (!origemPermitida(req, env)) return aceitar('Origem não permitida', false);
+      if ((conexoesPorIp.get(ipDe(req)) || 0) >= limites.conexoes) return aceitar('Conexões demais', false);
+      aceitar(null, true);
+    },
+    cors: { origin: (origem, pronto) => pronto(null, !origem || String(env.ORIGENS_PERMITIDAS || '').split(',').map((o) => o.trim()).indexOf(origem) !== -1) }
+  });
 
   /** Manda para cada aparelho da sala a visão dele. */
   function transmitir(sala) {
@@ -115,7 +240,35 @@ function criarServidor(opcoes) {
     if (typeof ack === 'function') ack(resultado);
   }
 
+  /** Um erro inesperado num evento não pode derrubar o servidor (e todas as salas junto). */
+  function protegido(nome, fn) {
+    return function () {
+      const args = arguments;
+      try {
+        fn.apply(null, args);
+      } catch (e) {
+        console.error('Erro no evento "' + nome + '":', e);
+        const ack = args[args.length - 1];
+        if (typeof ack === 'function') ack({ ok: false, erro: 'Algo deu errado. Tente de novo.' });
+      }
+    };
+  }
+
+  function tokenValido(token) {
+    return typeof token === 'string' && token.length > 0 && token.length <= TAMANHO_MAX_TOKEN;
+  }
+
   io.on('connection', (socket) => {
+    const ip = ipDe(socket.request);
+    conexoesPorIp.set(ip, (conexoesPorIp.get(ip) || 0) + 1);
+    socket.on('disconnect', () => {
+      const n = (conexoesPorIp.get(ip) || 1) - 1;
+      if (n <= 0) conexoesPorIp.delete(ip); else conexoesPorIp.set(ip, n);
+    });
+    // Todos os eventos passam pela rede de segurança.
+    const on = socket.on.bind(socket);
+    socket.on = (nome, fn) => on(nome, protegido(nome, fn));
+
     function entrarNoCanal(sala, token) {
       if (socket.data.codigo && socket.data.codigo !== sala.codigo) sairDaSala();
       socket.data.codigo = sala.codigo;
@@ -136,7 +289,10 @@ function criarServidor(opcoes) {
 
     socket.on('criar', (dados, ack) => {
       dados = dados || {};
-      const r = salas.criarSala(String(dados.token || ''), dados.nome);
+      if (!tokenValido(dados.token)) return responder(ack, { ok: false, erro: 'Aparelho sem identificação. Recarregue a página.' });
+      if (limiteCriar.estourou(ip)) return responder(ack, { ok: false, erro: 'Muitas salas criadas daqui. Espere um minuto.' });
+      limiteCriar.contar(ip);
+      const r = salas.criarSala(dados.token, dados.nome);
       if (!r.ok) return responder(ack, r);
       responder(ack, { ok: true, codigo: r.sala.codigo });
       entrarNoCanal(r.sala, String(dados.token));
@@ -144,8 +300,14 @@ function criarServidor(opcoes) {
 
     socket.on('entrar', (dados, ack) => {
       dados = dados || {};
-      const r = salas.entrar(dados.codigo, String(dados.token || ''), dados.nome);
-      if (!r.ok) return responder(ack, r);
+      if (!tokenValido(dados.token)) return responder(ack, { ok: false, erro: 'Aparelho sem identificação. Recarregue a página.' });
+      // Só tentativas que falham contam: quem joga normalmente nunca esbarra no limite.
+      if (limiteEntrar.estourou(ip)) return responder(ack, { ok: false, erro: 'Muitas tentativas. Espere um minuto e confira o código.' });
+      const r = salas.entrar(dados.codigo, dados.token, dados.nome);
+      if (!r.ok) {
+        limiteEntrar.contar(ip);
+        return responder(ack, r);
+      }
       responder(ack, { ok: true, codigo: r.sala.codigo });
       entrarNoCanal(r.sala, String(dados.token));
     });
@@ -212,7 +374,7 @@ function criarServidor(opcoes) {
   return { servidorHttp, io, salas };
 }
 
-module.exports = { criarServidor, servidoresIce, sinalValido };
+module.exports = { criarServidor, servidoresIce, sinalValido, arquivoPublico, origemPermitida, LIMITES };
 
 if (require.main === module) {
   // Na hospedagem a porta vem de PORT; em casa, 3000.
