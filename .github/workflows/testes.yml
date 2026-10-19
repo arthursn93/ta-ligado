@@ -1,0 +1,77 @@
+# Roda todos os testes em cada Pull Request para o main e em cada commit que entra no main.
+# Usa um PostgreSQL temporário, criado só para esta execução: nenhuma credencial e nenhum acesso
+# ao banco de produção. Ver "Testes automáticos" no README.
+name: Testes
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: testes-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  testes:
+    name: testes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      # Banco descartável, só existe durante esta execução. Mesma versão do Neon (18).
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: teste
+          # Sem senha: o banco só aceita conexões de dentro desta execução e é apagado no fim.
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # Liga os testes de PostgreSQL real em testes/persistencia.test.js.
+      # Esses testes APAGAM as tabelas: nunca aponte isto para o banco de produção.
+      TEST_DATABASE_URL: postgresql://postgres@localhost:5432/teste
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Mesma versão do Node usada no Render (NODE_VERSION no render.yaml).
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Instalar dependências (package-lock.json)
+        run: npm ci
+
+      - name: Rodar os testes
+        shell: bash
+        run: npm test 2>&1 | tee resultado-testes.txt
+
+      # O node:test só falha com erro; teste ignorado, pendente ou cancelado passaria em silêncio.
+      # Aqui qualquer um desses reprova, e os testes de PostgreSQL real precisam ter rodado.
+      - name: Conferir que nenhum teste foi ignorado
+        shell: bash
+        run: |
+          contar() { sed -n "s/^# $1 \([0-9]\+\)$/\1/p" resultado-testes.txt; }
+          total=$(contar tests); passou=$(contar pass); falhou=$(contar fail)
+          ignorados=$(contar skipped); pendentes=$(contar todo); cancelados=$(contar cancelled)
+          postgres=$(grep -c '^ok [0-9]\+ - postgres' resultado-testes.txt || true)
+          echo "Total: $total | passaram: $passou | falharam: $falhou | ignorados: $ignorados | pendentes: $pendentes | cancelados: $cancelados | PostgreSQL real: $postgres"
+          if [ -z "$total" ] || [ "$total" -eq 0 ]; then echo "::error::Resumo dos testes não encontrado."; exit 1; fi
+          if [ "$passou" != "$total" ] || [ "$falhou" != 0 ] || [ "$ignorados" != 0 ] || [ "$pendentes" != 0 ] || [ "$cancelados" != 0 ]; then
+            echo "::error::Nem todos os testes passaram."; exit 1
+          fi
+          if [ "$postgres" -eq 0 ]; then echo "::error::Os testes de PostgreSQL real não rodaram."; exit 1; fi

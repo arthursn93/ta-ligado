@@ -150,4 +150,8 @@ Os testes do banco rodam também num PostgreSQL de verdade quando `TEST_DATABASE
 TEST_DATABASE_URL=postgres://usuario:senha@localhost/ta_ligado_teste npm test
 ```
 
+### Testes automáticos
+
+O GitHub Actions (`.github/workflows/testes.yml`) roda todos os testes em cada Pull Request para o `main` e em cada commit que entra no `main`, com Node 22 e um PostgreSQL 18 temporário criado só para a execução. Nenhuma credencial é usada: o banco de produção nunca é acessado. A verificação `testes` só fica verde se nenhum teste falhar, for ignorado ou ficar pendente, e se os testes de PostgreSQL real tiverem rodado.
+
 Mais detalhes de produto e roadmap em [PROJETO.md](PROJETO.md).
