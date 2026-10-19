@@ -32,5 +32,6 @@
 - `Game` → estado oficial da partida (no modo online, roda no servidor).
 - `Salas` (servidor) → salas, anfitrião, dador da vez, permissões, reconexão por token.
 - `progressao/Partida` (servidor) → estatísticas por partida; o resumo sai por `aoEncerrarPartida` quando a partida termina ou é interrompida.
+- `progressao/Banco` (servidor) → grava cada partida no PostgreSQL (`DATABASE_URL`) numa transação; `Memoria` faz o mesmo em memória para testes; `Perfil` monta estatísticas, recordes e histórico.
 - `Rede` → cliente Socket.io com a mesma interface do `Game`; `Lobby` → criar/entrar na sala.
 - `UI` → estado visual local (seleção/hover) e renderização, nos modos local e online.

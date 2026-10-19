@@ -11,6 +11,7 @@
  *   'voz:config'                     -> {iceServers}
  *   'voz:estado' {estado}            -> {ok}   estado: null | 'ouvindo' | 'mudo' | 'ligado'
  *   'voz:sinal'  {para, dados}       (oferta/resposta/candidato WebRTC para outro jogador da sala)
+ *   'perfil'  {token}                -> {ok, perfil} | {ok:false, erro}   estatísticas e histórico do aparelho
  * Eventos do servidor:
  *   'estado'        visão da sala e da partida do ponto de vista de cada jogador.
  *   'chat'          uma mensagem nova da sala.
@@ -36,8 +37,12 @@ const TAMANHO_MAX_MENSAGEM_SOCKET = 64 * 1024; // sinais de voz cabem com folga
 const LIMITES = {
   conexoes: 60,                                 // simultâneas (uma escola inteira no mesmo Wi-Fi cabe)
   criar: { vezes: 10, janelaMs: 60 * 1000 },    // salas criadas por minuto
-  entrarErrado: { vezes: 10, janelaMs: 60 * 1000 } // códigos errados por minuto
+  entrarErrado: { vezes: 10, janelaMs: 60 * 1000 }, // códigos errados por minuto
+  perfil: { vezes: 30, janelaMs: 60 * 1000 }     // leituras do perfil por minuto
 };
+
+// Se o banco falhar ao gravar uma partida, tenta de novo depois destes intervalos.
+const ESPERAS_GRAVACAO_MS = [2000, 8000];
 
 /**
  * Servidores para o WebRTC achar o caminho entre aparelhos. STUN público resolve a maioria das redes;
@@ -171,15 +176,42 @@ function origemPermitida(req, env) {
 
 function criarServidor(opcoes) {
   opcoes = opcoes || {};
-  const salas = criarGerenciador({ criarJogo: opcoes.criarJogo });
+  // Onde a progressão é guardada (Banco ou Memoria). Sem armazém, o jogo funciona sem progressão.
+  const armazem = opcoes.armazem || null;
+  const esperasGravacao = opcoes.esperasGravacao || ESPERAS_GRAVACAO_MS;
+  const gravacoes = new Set();
+
+  /** Grava a partida que acabou. A gravação é idempotente, então tentar de novo é seguro. */
+  function gravarPartida(resumo) {
+    if (!armazem) return;
+    const tarefa = (async () => {
+      for (let tentativa = 0; ; tentativa++) {
+        try {
+          await armazem.gravarPartida(resumo);
+          return;
+        } catch (e) {
+          if (tentativa >= esperasGravacao.length) {
+            console.error('Não deu para gravar a partida ' + resumo.id + ':', e.message);
+            return;
+          }
+          await new Promise((pronto) => setTimeout(pronto, esperasGravacao[tentativa]).unref());
+        }
+      }
+    })();
+    gravacoes.add(tarefa);
+    tarefa.finally(() => gravacoes.delete(tarefa));
+  }
+
+  const salas = criarGerenciador({ criarJogo: opcoes.criarJogo, aoEncerrarPartida: gravarPartida });
   const tempoSalaVazia = opcoes.tempoSalaVazia || TEMPO_SALA_VAZIA_MS;
   const env = opcoes.env || process.env;
   const iceServers = servidoresIce(env);
   const limites = Object.assign({}, LIMITES, opcoes.limites);
   const limiteCriar = criarLimitador(limites.criar);
   const limiteEntrar = criarLimitador(limites.entrarErrado);
+  const limitePerfil = criarLimitador(limites.perfil);
   const conexoesPorIp = new Map();
-  setInterval(() => { limiteCriar.limpar(); limiteEntrar.limpar(); }, 5 * 60 * 1000).unref();
+  setInterval(() => { limiteCriar.limpar(); limiteEntrar.limpar(); limitePerfil.limpar(); }, 5 * 60 * 1000).unref();
 
   const servidorHttp = http.createServer((req, res) => {
     // Verificação de saúde da hospedagem (Render): responde rápido, sem tocar no disco.
@@ -349,6 +381,20 @@ function criarServidor(opcoes) {
       if (destino) io.to(destino.socketId).emit('voz:sinal', { de: destino.deId, dados: dados.dados });
     });
 
+    socket.on('perfil', (dados, ack) => {
+      dados = dados || {};
+      if (!armazem) return responder(ack, { ok: false, erro: 'O histórico não está disponível neste servidor.' });
+      if (!tokenValido(dados.token)) return responder(ack, { ok: false, erro: 'Aparelho sem identificação. Recarregue a página.' });
+      if (limitePerfil.estourou(ip)) return responder(ack, { ok: false, erro: 'Muitos pedidos. Espere um minuto.' });
+      limitePerfil.contar(ip);
+      armazem.perfil(dados.token).then(
+        (perfil) => responder(ack, { ok: true, perfil }),
+        (e) => {
+          console.error('Erro ao ler o perfil:', e.message);
+          responder(ack, { ok: false, erro: 'Não deu para carregar o histórico agora.' });
+        });
+    });
+
     socket.on('sair', (_dados, ack) => {
       if (typeof _dados === 'function') ack = _dados;
       sairDaSala();
@@ -371,7 +417,12 @@ function criarServidor(opcoes) {
     });
   });
 
-  return { servidorHttp, io, salas };
+  /** Espera as partidas que ainda estão sendo gravadas (usado antes de desligar). */
+  function aguardarGravacoes() {
+    return Promise.all([...gravacoes]);
+  }
+
+  return { servidorHttp, io, salas, aguardarGravacoes };
 }
 
 module.exports = { criarServidor, servidoresIce, sinalValido, arquivoPublico, origemPermitida, LIMITES };
@@ -379,14 +430,21 @@ module.exports = { criarServidor, servidoresIce, sinalValido, arquivoPublico, or
 if (require.main === module) {
   // Na hospedagem a porta vem de PORT; em casa, 3000.
   const porta = Number(process.env.PORT) || 3000;
-  const { servidorHttp, io } = criarServidor();
+  // Com DATABASE_URL a progressão fica no Postgres; sem ela, o jogo roda como antes, sem histórico.
+  const armazem = process.env.DATABASE_URL ? require('./progressao/Banco.js').criar(process.env.DATABASE_URL) : null;
+  if (!armazem) console.log('Sem DATABASE_URL: as partidas não serão gravadas.');
+  const { servidorHttp, io, aguardarGravacoes } = criarServidor({ armazem });
   servidorHttp.listen(porta, () => {
     console.log('Tá Ligado? ouvindo na porta ' + porta + (process.env.PORT ? '' : ' (http://localhost:' + porta + ')'));
   });
-  // A hospedagem manda SIGTERM antes de trocar de versão: fecha as conexões sem travar.
+  // A hospedagem manda SIGTERM antes de trocar de versão: fecha as conexões e termina de gravar
+  // as partidas em andamento, sem travar.
   process.on('SIGTERM', () => {
     io.close();
-    servidorHttp.close(() => process.exit(0));
+    servidorHttp.close();
+    aguardarGravacoes()
+      .then(() => armazem && armazem.fechar())
+      .finally(() => process.exit(0));
     setTimeout(() => process.exit(0), 5000).unref();
   });
 }

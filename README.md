@@ -57,6 +57,19 @@ Bom saber sobre o plano gratuito:
 - As páginas saem comprimidas (gzip) e com cabeçalhos de segurança (CSP, sem iframe de outros sites).
 - A página [privacidade.html](privacidade.html) explica o que o jogo guarda e as regras de uso; ela fica linkada na tela inicial.
 
+### Histórico das partidas (banco de dados)
+
+O servidor guarda o resultado de cada partida online para montar as estatísticas e o histórico de cada jogador. Para isso ele precisa de um PostgreSQL. Sem banco, o jogo funciona normalmente, só sem histórico.
+
+1. Crie um banco PostgreSQL. O [Neon](https://neon.tech) tem plano gratuito que não expira (o Postgres gratuito do Render expira em 30 dias).
+2. Copie a URL de conexão (começa com `postgresql://` e termina com `?sslmode=require`).
+3. No Render, abra o serviço, vá em **Environment** e crie a variável `DATABASE_URL` com essa URL. O Render reinicia o serviço sozinho.
+4. Na subida o servidor cria as tabelas sozinho e escreve `Migração aplicada` no log.
+
+A senha fica só nessa variável, nunca no repositório. Cada aparelho é identificado pelo código aleatório que o navegador já guarda; o banco recebe só uma versão embaralhada (hash) dele. Por isso o histórico fica preso ao navegador: outro aparelho, aba anônima ou limpar os dados do site começam do zero.
+
+Se o banco estiver fora do ar quando uma partida acaba, o servidor tenta gravar de novo duas vezes e segue o jogo normalmente. A mesma partida nunca é gravada duas vezes.
+
 ### Num aparelho só
 
 Abra o `index.html` direto no navegador (dois cliques, sem servidor) e o aparelho vai passando de mão em mão. Com o servidor rodando, essa opção também aparece na tela inicial: **Jogar num aparelho só**.
@@ -76,6 +89,9 @@ Abra o `index.html` direto no navegador (dois cliques, sem servidor) e o aparelh
 | `server/index.js` | Servidor HTTP + Socket.io. Serve só os arquivos do jogo, com limites contra abuso. |
 | `server/Salas.js` | Salas por código, anfitrião, rodízio do dador, permissões e reconexão. |
 | `server/progressao/Partida.js` | Estatísticas de cada partida online (acertos, erros, sequência, pistas de cada dador), contadas no servidor. |
+| `server/progressao/Banco.js` | Grava as partidas no PostgreSQL e lê o perfil de cada aparelho. Aplica as migrações de `server/progressao/migracoes/` na subida. |
+| `server/progressao/Memoria.js` | O mesmo que o `Banco.js`, só em memória (testes e jogo em casa). |
+| `server/progressao/Perfil.js` | Monta estatísticas gerais, recordes e histórico a partir das partidas gravadas. |
 | `js/Theme.js` | Skins de cor. |
 | `style.css` | Visual estilo jogo de cartas retrô. |
 | `privacidade.html` | Privacidade e termos de uso. |
@@ -89,6 +105,12 @@ Os scripts são carregados como scripts comuns (sem `import`) para o jogo abrir 
 ```bash
 npm install
 npm test
+```
+
+Os testes do banco rodam também num PostgreSQL de verdade quando `TEST_DATABASE_URL` está definida. Use um banco só para isso, porque as tabelas são apagadas:
+
+```bash
+TEST_DATABASE_URL=postgres://usuario:senha@localhost/ta_ligado_teste npm test
 ```
 
 Mais detalhes de produto e roadmap em [PROJETO.md](PROJETO.md).
