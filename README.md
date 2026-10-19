@@ -71,6 +71,10 @@ A senha fica só nessa variável, nunca no repositório. Cada aparelho é identi
 
 Se o banco estiver fora do ar quando uma partida acaba, o servidor tenta gravar de novo duas vezes e segue o jogo normalmente. A mesma partida nunca é gravada duas vezes.
 
+### Backup do banco
+
+Todo dia às 03:00 de Brasília, o workflow **Backup do banco** (GitHub Actions) copia o banco do Neon com um usuário só de leitura, criptografa a cópia, restaura num PostgreSQL temporário para conferir tabelas, linhas e conteúdo, e guarda só o arquivo criptografado por 30 dias. Se algo falhar, uma issue **Backup do banco falhou** é aberta e fecha sozinha quando um backup seguinte der certo. Configuração, avisos e como restaurar: [docs/backup.md](docs/backup.md).
+
 ### XP e níveis
 
 O servidor calcula o XP de cada pessoa quando a partida termina; o aparelho só mostra. Os números ficam em `server/progressao/regras.js`.
@@ -134,6 +138,7 @@ Abra o `index.html` direto no navegador (dois cliques, sem servidor) e o aparelh
 | `privacidade.html` | Privacidade e termos de uso. |
 | `favicon.svg`, `icone-180.png`, `previa.png` | Ícone da aba, ícone do celular e imagem da prévia do link (WhatsApp etc.). |
 | `testes/` | Testes da lógica, das salas e do servidor. |
+| `scripts/backup-*`, `docs/backup.md` | Backup diário do banco: cópia, criptografia, restauração de teste e o usuário só de leitura do Neon. |
 
 Os scripts são carregados como scripts comuns (sem `import`) para o jogo abrir direto do disco. O mesmo `Game.js` roda no navegador (modo local) e no servidor (modo online).
 

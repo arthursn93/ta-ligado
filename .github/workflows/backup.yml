@@ -1,0 +1,161 @@
+# Backup diário do banco do Neon, criptografado, com restauração de teste num PostgreSQL temporário.
+# Ninguém precisa acompanhar: se algo falhar, uma issue "Backup do banco falhou" é aberta no repositório
+# e fica lá até um backup seguinte dar certo. Ver docs/backup.md.
+name: Backup do banco
+
+on:
+  schedule:
+    # 06:00 UTC = 03:00 de Brasília (o Brasil não tem horário de verão desde 2019).
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      simular_falha:
+        description: 'Falhar de propósito, para conferir se o aviso chega'
+        type: boolean
+        default: false
+  # Nos PRs que mexem no backup, roda em modo de teste: copia um banco temporário, sem nenhum segredo.
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/backup.yml
+      - scripts/backup-*
+      - server/progressao/migracoes/**
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: backup
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      # Banco descartável onde a cópia é restaurada para teste. Some no fim da execução.
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: restauracao
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      PG_BIN: /usr/lib/postgresql/18/bin
+      TESTE_URL: postgresql://postgres@localhost:5432/restauracao
+      SAIDA: /tmp/backup-banco
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Falha simulada
+        if: inputs.simular_falha
+        run: |
+          echo "::error::Falha simulada pedida no Run workflow, para testar o aviso."
+          exit 1
+
+      # O Neon roda PostgreSQL 18; um pg_dump mais antigo se recusa a copiá-lo. Vem do repositório oficial.
+      - name: Instalar o cliente PostgreSQL 18
+        run: |
+          if [ ! -x /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh ]; then
+            sudo apt-get update -q && sudo apt-get install -y -q postgresql-common
+          fi
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -q postgresql-client-18
+          "$PG_BIN/pg_dump" --version
+
+      - name: Preparar banco de origem de teste
+        if: github.event_name == 'pull_request'
+        run: |
+          origem=$(scripts/backup-preparar-teste.sh postgresql://postgres@localhost:5432/postgres | tail -1)
+          senha=$(openssl rand -hex 24)
+          echo "::add-mask::$senha"
+          { echo "ORIGEM_URL=$origem"; echo "BACKUP_SENHA=$senha"; echo "MODO=teste"; } >> "$GITHUB_ENV"
+
+      - name: Copiar, criptografar e testar a restauração (teste)
+        if: github.event_name == 'pull_request'
+        run: scripts/backup-banco.sh
+
+      - name: Copiar, criptografar e testar a restauração
+        id: backup
+        if: github.event_name != 'pull_request'
+        env:
+          ORIGEM_URL: ${{ secrets.NEON_BACKUP_URL }}
+          BACKUP_SENHA: ${{ secrets.BACKUP_SENHA }}
+        run: scripts/backup-banco.sh
+
+      # Só o arquivo criptografado é guardado. Em repositório público, qualquer pessoa logada pode baixar
+      # artefatos: sem a senha, o arquivo não serve para nada.
+      - name: Guardar a cópia criptografada (30 dias)
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backup-banco-${{ github.run_id }}
+          path: ${{ steps.backup.outputs.arquivo }}
+          retention-days: 30
+          compression-level: 0
+          if-no-files-found: error
+
+  # Aviso que fica registrado: uma issue aberta enquanto o backup estiver falhando, fechada sozinha quando
+  # um backup seguinte der certo. Também avisa antes de o GitHub pausar o agendamento por falta de commits.
+  avisar:
+    name: avisar
+    needs: backup
+    if: always() && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      EXECUCAO: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      DONO: ${{ github.repository_owner }}
+    steps:
+      - name: Registrar o resultado
+        env:
+          RESULTADO: ${{ needs.backup.result }}
+        run: |
+          titulo='Backup do banco falhou'
+          gh label create backup --color B60205 --description 'Avisos do backup diário' --force > /dev/null
+          aberta=$(gh issue list --label backup --state open --search "in:title \"$titulo\"" --json number --jq '.[0].number // empty')
+          quando=$(TZ=America/Sao_Paulo date '+%d/%m/%Y %H:%M')
+          if [ "$RESULTADO" = success ]; then
+            if [ -n "$aberta" ]; then
+              gh issue comment "$aberta" --body "Backup de $quando (Brasília) deu certo: $EXECUCAO"
+              gh issue close "$aberta" --reason completed
+            fi
+            echo "Backup ok."
+            exit 0
+          fi
+          corpo="@$DONO o backup de $quando (Brasília) não terminou ($RESULTADO). Nenhum dado do jogo foi alterado.
+
+          Abra a execução e veja o passo marcado em vermelho: $EXECUCAO
+
+          Esta issue fecha sozinha quando um backup seguinte der certo. O passo a passo está em docs/backup.md."
+          if [ -n "$aberta" ]; then
+            gh issue comment "$aberta" --body "$corpo"
+          else
+            gh issue create --title "$titulo" --label backup --body "$corpo"
+          fi
+
+      # Em repositório público, o GitHub pausa agendamentos depois de 60 dias sem atividade.
+      - name: Conferir se o agendamento corre risco de pausar
+        run: |
+          ultimo=$(gh api "repos/$GH_REPO/commits?per_page=1" --jq '.[0].commit.committer.date')
+          dias=$(( ( $(date +%s) - $(date -d "$ultimo" +%s) ) / 86400 ))
+          echo "Último commit no main: $ultimo ($dias dias atrás)."
+          titulo='Backup diário vai pausar sem um commit'
+          [ "$dias" -ge 45 ] || exit 0
+          [ -z "$(gh issue list --label backup --state open --search "in:title \"$titulo\"" --json number --jq '.[0].number // empty')" ] || exit 0
+          gh issue create --title "$titulo" --label backup --body "@$DONO faz $dias dias que nada entra no main. Com 60 dias, o GitHub pausa o backup diário deste repositório público. Qualquer PR com merge no main resolve; depois, feche esta issue."
