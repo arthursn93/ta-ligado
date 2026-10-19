@@ -47,7 +47,7 @@ function contrato(nome, fabricar) {
   test(nome + ': grava a partida e monta o perfil', async () => {
     const a = await fabricar();
     try {
-      assert.deepEqual(await a.gravarPartida(resumo(vinte)), { gravada: true });
+      assert.equal((await a.gravarPartida(resumo(vinte))).gravada, true);
       const ana = await a.perfil('tA');
       assert.equal(ana.nome, 'Ana');
       assert.deepEqual(ana.partidas, { concluidas: 1, saiuAntes: 0, interrompidas: 0 });
@@ -107,6 +107,60 @@ function contrato(nome, fabricar) {
     }
   });
 
+  test(nome + ': XP da partida, nível e detalhe do cálculo', async () => {
+    const a = await fabricar();
+    try {
+      // 20 acertos: Ana (dador de todas) 30 + 40 + 20×5 + 20 = 190; Bia 30 + 40 + 20 = 90.
+      const r = await a.gravarPartida(resumo(vinte));
+      const ana = r.jogadores.find((j) => j.tokenHash === Perfil.hashToken('tA'));
+      const bia = r.jogadores.find((j) => j.tokenHash === Perfil.hashToken('tB'));
+      assert.equal(ana.xpGanho, 190);
+      assert.deepEqual(ana.detalhe.map((d) => d.motivo), ['participacao', 'acertos_turma', 'pistas_certas', 'desafio']);
+      assert.equal(ana.nivel.nivel, 2);
+      assert.equal(ana.subiuDeNivel, true);
+      assert.equal(bia.xpGanho, 90);
+      assert.equal(bia.nivel.nivel, 1);
+      assert.equal(bia.nivel.falta, 10);
+      assert.equal(bia.subiuDeNivel, false);
+      const perfil = await a.perfil('tA');
+      assert.equal(perfil.nivel.xp, 190);
+      assert.equal(perfil.historico[0].xpGanho, 190);
+    } finally {
+      await a.fechar();
+    }
+  });
+
+  test(nome + ': interrompida, saída antes do fim e partida repetida não dão XP', async () => {
+    const a = await fabricar();
+    try {
+      await a.gravarPartida(resumo([true, true, true]));
+      await a.gravarPartida(resumo(vinte, { noFim: ['tA'], inicio: 3000, fim: 4000 }));
+      const r = resumo(vinte, { inicio: 5000, fim: 6000 });
+      await a.gravarPartida(r);
+      await a.gravarPartida(r);
+      assert.equal((await a.perfil('tB')).nivel.xp, 90, 'só a partida válida, uma vez');
+      assert.equal((await a.perfil('tA')).nivel.xp, 380);
+    } finally {
+      await a.fechar();
+    }
+  });
+
+  test(nome + ': depois de 10 partidas válidas em 24 horas, só a participação conta', async () => {
+    const a = await fabricar();
+    const hora = 60 * 60 * 1000;
+    try {
+      for (let i = 0; i < 11; i++) await a.gravarPartida(resumo(vinte, { inicio: i * hora, fim: i * hora + 1000 }));
+      assert.equal((await a.perfil('tB')).nivel.xp, 10 * 90 + 30);
+      // Passadas 24 horas da primeira, o XP cheio volta.
+      const r = await a.gravarPartida(resumo(vinte, { inicio: 25 * hora, fim: 25 * hora + 1000 }));
+      const bia = r.jogadores.find((j) => j.tokenHash === Perfil.hashToken('tB'));
+      assert.equal(bia.xpGanho, 90);
+      assert.equal(bia.limitado, false);
+    } finally {
+      await a.fechar();
+    }
+  });
+
   test(nome + ': histórico guarda as 20 mais recentes, totais contam todas', async () => {
     const a = await fabricar();
     try {
@@ -160,7 +214,8 @@ if (process.env.TEST_DATABASE_URL) {
       await assert.rejects(b.gravarPartida(r));
       assert.equal((await b.perfil('tA')).cartas, 0, 'a linha da Ana não pode ter ficado');
       r.jogadores[1].nome = 'Bia';
-      assert.deepEqual(await b.gravarPartida(r), { gravada: true }, 'tentar de novo funciona');
+      assert.equal((await b.gravarPartida(r)).gravada, true, 'tentar de novo funciona');
+      assert.equal((await b.perfil('tA')).nivel.xp, 30 + 40 + 100 + 20, 'XP somado uma vez só');
     } finally {
       await b.fechar();
     }

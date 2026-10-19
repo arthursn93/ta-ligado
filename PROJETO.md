@@ -15,7 +15,7 @@
 - Fase 2: servidor salva anonimamente as melhores pistas humanas → modo Solo/Campanha usa essas pistas.
 
 ## 4. Monetização / progressão (futuro)
-- Níveis/XP ficam para depois. MVP = partida crua e divertida.
+- Progressão (em andamento): estatísticas por partida, histórico no PostgreSQL, XP e níveis calculados no servidor. Recompensas só visuais, sem vantagem no jogo.
 - Código modular para: anúncios entre partidas, pacotes temáticos de palavras, skins de cor do tabuleiro.
 
 ## 5. Arquitetura
@@ -33,5 +33,6 @@
 - `Salas` (servidor) → salas, anfitrião, dador da vez, permissões, reconexão por token.
 - `progressao/Partida` (servidor) → estatísticas por partida; o resumo sai por `aoEncerrarPartida` quando a partida termina ou é interrompida.
 - `progressao/Banco` (servidor) → grava cada partida no PostgreSQL (`DATABASE_URL`) numa transação; `Memoria` faz o mesmo em memória para testes; `Perfil` monta estatísticas, recordes e histórico.
+- `progressao/regras` (servidor) → XP por partida, limite diário e curva de níveis; todos os números de balanceamento.
 - `Rede` → cliente Socket.io com a mesma interface do `Game`; `Lobby` → criar/entrar na sala.
 - `UI` → estado visual local (seleção/hover) e renderização, nos modos local e online.
