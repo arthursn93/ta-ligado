@@ -12,6 +12,7 @@
 const crypto = require('crypto');
 const Game = require('../js/Game.js');
 const Partida = require('./progressao/Partida.js');
+const { hashToken } = require('./progressao/Perfil.js');
 
 const LETRAS_CODIGO = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // sem I e O, que confundem com 1 e 0
 const MAX_JOGADORES = 10;
@@ -27,6 +28,8 @@ function criarGerenciador(opcoes) {
   const criarJogo = opcoes.criarJogo || (() => Game.criar());
   // Chamado com o resumo de cada partida que termina (concluída ou interrompida).
   const aoEncerrarPartida = opcoes.aoEncerrarPartida || (() => {});
+  // Com progressão ligada, a tela do placar final espera o XP de cada um.
+  const progressaoAtiva = !!opcoes.progressaoAtiva;
   const salas = new Map(); // codigo -> sala
 
   function novoCodigo() {
@@ -51,7 +54,7 @@ function criarGerenciador(opcoes) {
   }
 
   function novoJogador(sala, token, nome) {
-    const jogador = { id: crypto.randomUUID().slice(0, 8), token, nome, online: true, voz: null, vozSocket: null, envios: [] };
+    const jogador = { id: crypto.randomUUID().slice(0, 8), token, nome, online: true, voz: null, vozSocket: null, envios: [], selo: null };
     sala.jogadores.push(jogador);
     return jogador;
   }
@@ -63,7 +66,7 @@ function criarGerenciador(opcoes) {
     if (!nome) return erro('Digite seu nome.');
     const sala = {
       codigo: novoCodigo(), jogadores: [], anfitriaoId: null, jogo: null, dadorId: null, rodadaDoDador: 0,
-      chat: [], seqMensagem: 0, partida: null, ultimaPartida: null
+      chat: [], seqMensagem: 0, partida: null, ultimaPartida: null, progresso: null
     };
     const jogador = novoJogador(sala, token, nome);
     sala.anfitriaoId = jogador.id;
@@ -295,6 +298,32 @@ function criarGerenciador(opcoes) {
     return { deId: de.id, socketId: para.vozSocket };
   }
 
+  /** Nível, título e moldura de quem tem esse token, mostrados ao lado do nome (null = sem perfil). */
+  function definirSelo(codigo, token, selo) {
+    const sala = salas.get(codigo);
+    const jogador = sala && acharJogador(sala, token);
+    if (!jogador) return null;
+    jogador.selo = selo || null;
+    return sala;
+  }
+
+  /** O XP que cada um ganhou na partida que terminou. `porHash`: hash do token -> resultado. */
+  function registrarProgresso(codigo, partidaId, porHash, falhou) {
+    const sala = salas.get(codigo);
+    if (!sala) return null;
+    sala.progresso = { partidaId, porHash, falhou: !!falhou };
+    return sala;
+  }
+
+  /** O resultado de XP deste jogador, só no placar final da partida a que ele se refere. */
+  function progressoPara(sala, eu) {
+    if (!progressaoAtiva || !eu || !sala.jogo || sala.jogo.visao().fase !== Game.FASE.FIM || !sala.ultimaPartida) return null;
+    const pronto = sala.progresso && sala.progresso.partidaId === sala.ultimaPartida.id;
+    if (!pronto) return { carregando: true };
+    if (sala.progresso.falhou) return { erro: true };
+    return sala.progresso.porHash.get(hashToken(eu.token)) || { semXp: true };
+  }
+
   /** Tudo o que um jogador pode ver: a sala e a partida do ponto de vista dele. */
   function visaoPara(sala, token) {
     const eu = acharJogador(sala, token);
@@ -305,9 +334,10 @@ function criarGerenciador(opcoes) {
         anfitriaoId: sala.anfitriaoId,
         dadorId: sala.dadorId,
         euId: eu ? eu.id : null,
-        jogadores: sala.jogadores.map((j) => ({ id: j.id, nome: j.nome, online: j.online, voz: j.voz }))
+        jogadores: sala.jogadores.map((j) => ({ id: j.id, nome: j.nome, online: j.online, voz: j.voz, selo: j.selo }))
       },
-      jogo: sala.jogo ? sala.jogo.visao(souDador ? 'dador' : 'grupo') : null
+      jogo: sala.jogo ? sala.jogo.visao(souDador ? 'dador' : 'grupo') : null,
+      progresso: progressoPara(sala, eu)
     };
   }
 
@@ -324,6 +354,8 @@ function criarGerenciador(opcoes) {
     definirVoz,
     vozCaiu,
     destinoDoSinal,
+    definirSelo,
+    registrarProgresso,
     historicoChat: (codigo) => (salas.get(codigo) ? salas.get(codigo).chat.slice() : []),
     obter: (codigo) => salas.get(codigo),
     total: () => salas.size

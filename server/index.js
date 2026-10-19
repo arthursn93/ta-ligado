@@ -18,6 +18,8 @@
  *   'chat'          uma mensagem nova da sala.
  *   'chat:historico' as últimas mensagens, ao entrar.
  *   'voz:sinal'     {de, dados} sinal WebRTC vindo de outro jogador.
+ * Na visão de cada um, `progresso` traz o XP ganho na partida que acabou de terminar
+ * ({carregando} enquanto grava) e cada jogador da sala traz `selo` {nivel, titulo, moldura}.
  */
 'use strict';
 
@@ -188,11 +190,13 @@ function criarServidor(opcoes) {
     const tarefa = (async () => {
       for (let tentativa = 0; ; tentativa++) {
         try {
-          await armazem.gravarPartida(resumo);
+          const r = await armazem.gravarPartida(resumo);
+          if (r.gravada) await mostrarProgresso(resumo, r.jogadores);
           return;
         } catch (e) {
           if (tentativa >= esperasGravacao.length) {
             console.error('Não deu para gravar a partida ' + resumo.id + ':', e.message);
+            transmitir(salas.registrarProgresso(resumo.codigoSala, resumo.id, new Map(), true));
             return;
           }
           await new Promise((pronto) => setTimeout(pronto, esperasGravacao[tentativa]).unref());
@@ -203,7 +207,31 @@ function criarServidor(opcoes) {
     tarefa.finally(() => gravacoes.delete(tarefa));
   }
 
-  const salas = criarGerenciador({ criarJogo: opcoes.criarJogo, aoEncerrarPartida: gravarPartida });
+  /** Manda a cada um o XP da partida e atualiza o selo (nível e título) de quem está na sala. */
+  async function mostrarProgresso(resumo, jogadores) {
+    const porHash = new Map(jogadores.map((j) => {
+      const sem = Object.assign({}, j);
+      delete sem.tokenHash;
+      return [j.tokenHash, sem];
+    }));
+    const sala = salas.registrarProgresso(resumo.codigoSala, resumo.id, porHash);
+    if (!sala) return;
+    await Promise.all(sala.jogadores.map((j) => atualizarSelo(sala.codigo, j.token, false)));
+    transmitir(salas.obter(resumo.codigoSala));
+  }
+
+  /** Lê do armazém o selo de quem entrou na sala. Falha aqui só deixa o nome sem selo. */
+  async function atualizarSelo(codigo, token, transmitirDepois) {
+    if (!armazem) return;
+    try {
+      const sala = salas.definirSelo(codigo, token, await armazem.selo(token));
+      if (transmitirDepois) transmitir(sala);
+    } catch (e) {
+      console.error('Erro ao ler o selo:', e.message);
+    }
+  }
+
+  const salas = criarGerenciador({ criarJogo: opcoes.criarJogo, aoEncerrarPartida: gravarPartida, progressaoAtiva: !!armazem });
   const tempoSalaVazia = opcoes.tempoSalaVazia || TEMPO_SALA_VAZIA_MS;
   const env = opcoes.env || process.env;
   const iceServers = servidoresIce(env);
@@ -329,6 +357,7 @@ function criarServidor(opcoes) {
       if (!r.ok) return responder(ack, r);
       responder(ack, { ok: true, codigo: r.sala.codigo });
       entrarNoCanal(r.sala, String(dados.token));
+      atualizarSelo(r.sala.codigo, String(dados.token), true);
     });
 
     socket.on('entrar', (dados, ack) => {
@@ -343,6 +372,7 @@ function criarServidor(opcoes) {
       }
       responder(ack, { ok: true, codigo: r.sala.codigo });
       entrarNoCanal(r.sala, String(dados.token));
+      atualizarSelo(r.sala.codigo, String(dados.token), true);
     });
 
     socket.on('iniciar', (_dados, ack) => {
@@ -404,7 +434,10 @@ function criarServidor(opcoes) {
       if (limitePerfil.estourou(ip)) return responder(ack, { ok: false, erro: 'Muitos pedidos. Espere um minuto.' });
       limitePerfil.contar(ip);
       armazem.escolherVisual(dados.token, dados.tipo, dados.id).then(
-        (r) => responder(ack, r.erro ? { ok: false, erro: r.erro } : { ok: true, perfil: r.perfil }),
+        (r) => {
+          responder(ack, r.erro ? { ok: false, erro: r.erro } : { ok: true, perfil: r.perfil });
+          if (!r.erro && socket.data.codigo && socket.data.token === dados.token) atualizarSelo(socket.data.codigo, dados.token, true);
+        },
         (e) => {
           console.error('Erro ao escolher item visual:', e.message);
           responder(ack, { ok: false, erro: 'Não deu para salvar agora.' });

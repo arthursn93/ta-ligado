@@ -129,6 +129,12 @@ var Rede = (function () {
       },
       iniciar: function () { return pedir('iniciar'); },
 
+      // Progressão: o servidor calcula tudo; aqui só pede e mostra.
+      /** XP da partida que acabou de terminar, ou null. */
+      progresso: function () { return (estado && estado.progresso) || null; },
+      perfil: function () { return pedir('perfil', { token: token }); },
+      escolherVisual: function (tipo, id) { return pedir('perfil:visual', { token: token, tipo: tipo, id: id }); },
+
       // Chat e voz (Social.js)
       emitir: pedir,
       enviar: function (evento, dados) { if (socket.connected) socket.emit(evento, dados); },

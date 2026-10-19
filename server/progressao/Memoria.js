@@ -44,6 +44,11 @@ function criar() {
       const minhas = linhas.filter((l) => l.tokenHash === h).reverse().sort((a, b) => b.encerradaEm - a.encerradaEm);
       return Perfil.montar(nomes.get(h), minhas, xps.get(h), conquistas.get(h), visuais.get(h));
     },
+    async selo(token) {
+      const h = Perfil.hashToken(token);
+      if (!nomes.has(h)) return null;
+      return Perfil.selo(xps.get(h), conquistas.get(h), visuais.get(h));
+    },
     async escolherVisual(token, tipo, id) {
       const h = Perfil.hashToken(token);
       if (!nomes.has(h)) return { erro: 'Jogue uma partida para liberar itens.' };

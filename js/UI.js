@@ -213,6 +213,9 @@ var UI = (function () {
         case 'fechar-fim':
           etapa = 'encerrada';
           break;
+        case 'perfil':
+          Progresso.abrir(jogo);
+          return;
         case 'ver-placar':
           etapa = 'fim';
           break;
@@ -306,8 +309,10 @@ var UI = (function () {
       var sala = jogo.sala();
       var html = '<span class="barra-codigo">Sala <b>' + esc(sala.codigo) + '</b></span>' +
         '<ul class="barra-jogadores">' + sala.jogadores.map(function (j) {
-          var classes = (j.online ? '' : ' is-offline') + (j.id === sala.dadorId ? ' is-dador' : '') + (j.id === sala.euId ? ' is-eu' : '');
+          var classes = (j.online ? '' : ' is-offline') + (j.id === sala.dadorId ? ' is-dador' : '') + (j.id === sala.euId ? ' is-eu' : '') +
+            Progresso.classeMoldura(j);
           return '<li class="chip' + classes + '" data-jogador-id="' + esc(j.id) + '" title="' + esc(j.nome) +
+            (j.selo ? ', nível ' + j.selo.nivel + ' · ' + esc(j.selo.titulo) : '') +
             (j.id === sala.dadorId ? ' está dando a pista' : '') + (j.online ? '' : ' (desconectado)') + '">' +
             (j.id === sala.dadorId ? '<span aria-hidden="true">🎤</span> ' : '') + esc(j.nome) +
             (j.id === sala.anfitriaoId ? ' <span aria-label="anfitrião">👑</span>' : '') +
@@ -499,7 +504,9 @@ var UI = (function () {
     }
 
     function renderModal(v) {
-      var chave = confirmandoNova ? 'nova' : etapa;
+      var progresso = online && etapa === 'fim' ? jogo.progresso() : null;
+      // O XP chega um instante depois do fim: a chave muda quando ele chega, para redesenhar.
+      var chave = confirmandoNova ? 'nova' : etapa === 'fim' ? 'fim' + (progresso ? (progresso.carregando ? '-calculando' : '-pronto') : '') : etapa;
       var conteudo = null;
 
       if (confirmandoNova) {
@@ -547,11 +554,13 @@ var UI = (function () {
           '<h2>' + (perfeito
             ? 'Vocês posicionaram as 25 cartas sem nenhum erro!'
             : 'Você acertou ' + v.acertos + ' de ' + v.totalCartas + ' coordenadas!') + '</h2>' +
+          Progresso.blocoFim(progresso) +
           '<div class="acoes">' +
             '<button class="botao botao-fantasma" data-acao="fechar-fim">Ver tabuleiro</button>' +
             (podeRecomecar() ? '<button class="botao botao-primario" data-acao="nova-confirmar">Jogar de novo</button>' : '') +
           '</div>' +
-          (podeRecomecar() ? '' : esperandoAnfitriao());
+          (podeRecomecar() ? '' : esperandoAnfitriao()) +
+          (progresso ? '<button type="button" class="botao botao-fantasma botao-pequeno fim-perfil" data-acao="perfil">Ver meu perfil</button>' : '');
       }
 
       if (!conteudo) {
@@ -563,7 +572,7 @@ var UI = (function () {
       if (chave === chaveModal) return; // mantém o que o dador já digitou
       chaveModal = chave;
       el.modal.innerHTML = conteudo;
-      el.modal.className = 'cartao-modal modal-' + chave;
+      el.modal.className = 'cartao-modal modal-' + (confirmandoNova ? 'nova' : etapa);
       el.sobreposicao.hidden = false;
       var focar = el.modal.querySelector('input') || el.modal.querySelector('.botao-primario');
       if (focar) focar.focus();

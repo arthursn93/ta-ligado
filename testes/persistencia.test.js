@@ -341,6 +341,68 @@ test('servidor: o aparelho não consegue escolher item bloqueado nem mandar XP',
   assert.ok(ok.perfil.nivel.xp < 1000);
 });
 
+function clienteComEstado(url) {
+  const s = conectar(url, { transports: ['websocket'], forceNew: true });
+  s.ultimo = null;
+  s.on('estado', (e) => { s.ultimo = e; });
+  s.pedir = (evento, dados) => new Promise((ok) => s.emit(evento, dados, ok));
+  s.esperar = (cond) => new Promise((ok) => {
+    if (s.ultimo && cond(s.ultimo)) return ok(s.ultimo);
+    const f = (e) => { if (cond(e)) { s.off('estado', f); ok(e); } };
+    s.on('estado', f);
+  });
+  return s;
+}
+
+test('servidor: placar final traz o XP de cada um e a sala mostra nível e título', async (t) => {
+  const armazem = Memoria.criar();
+  const srv = await subir({ armazem });
+  const a = clienteComEstado(srv.url), b = clienteComEstado(srv.url);
+  t.after(() => { a.close(); b.close(); srv.io.close(); });
+  const { codigo } = await a.pedir('criar', { nome: 'Ana', token: 'tA' });
+  await b.pedir('entrar', { codigo, nome: 'Bia', token: 'tB' });
+  // Ninguém tem perfil ainda: sem selo.
+  const antes = await b.esperar((e) => e.sala.jogadores.length === 2);
+  assert.equal(antes.sala.jogadores[0].selo, null);
+  await a.pedir('iniciar');
+  const sala = srv.salas.obter(codigo);
+  jogarInteira(srv.salas, sala);
+  await srv.aguardarGravacoes();
+  const fimB = await b.esperar((e) => e.progresso && !e.progresso.carregando);
+  assert.equal(fimB.progresso.valida, true);
+  assert.ok(fimB.progresso.xpGanho > 0);
+  assert.equal(fimB.progresso.tokenHash, undefined, 'o hash do token não vai para o aparelho');
+  assert.ok(fimB.sala.jogadores.every((j) => j.selo && j.selo.nivel >= 1));
+  const fimA = await a.esperar((e) => e.progresso && !e.progresso.carregando);
+  assert.notEqual(fimA.progresso.xpGanho, fimB.progresso.xpGanho, 'cada um recebe o seu');
+  // Nova partida: o resumo some.
+  await a.pedir('iniciar');
+  const nova = await a.esperar((e) => e.jogo.fase !== 'fim');
+  assert.equal(nova.progresso, null);
+});
+
+test('servidor: visão mostra "calculando" até gravar e avisa se não der para gravar', async () => {
+  const armazem = Object.assign(Memoria.criar(), { gravarPartida: () => Promise.reject(new Error('fora do ar')) });
+  const srv = await subir({ armazem, esperasGravacao: [1] });
+  try {
+    const { sala } = srv.salas.criarSala('tA', 'Ana');
+    srv.salas.entrar(sala.codigo, 'tB', 'Bia');
+    srv.salas.iniciar(sala.codigo, 'tA');
+    jogarInteira(srv.salas, sala);
+    assert.deepEqual(srv.salas.visaoPara(sala, 'tA').progresso, { carregando: true });
+    const original = console.error;
+    console.error = () => {};
+    try {
+      await srv.aguardarGravacoes();
+    } finally {
+      console.error = original;
+    }
+    assert.deepEqual(srv.salas.visaoPara(sala, 'tA').progresso, { erro: true });
+  } finally {
+    srv.io.close();
+  }
+});
+
 test('servidor sem banco: o perfil avisa que não está disponível', async (t) => {
   const srv = await subir({});
   t.after(() => srv.io.close());
