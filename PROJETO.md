@@ -15,7 +15,7 @@
 - Fase 2: servidor salva anonimamente as melhores pistas humanas → modo Solo/Campanha usa essas pistas.
 
 ## 4. Monetização / progressão (futuro)
-- Progressão (em andamento): estatísticas por partida, histórico no PostgreSQL, XP e níveis calculados no servidor. Recompensas só visuais, sem vantagem no jogo.
+- Progressão (pronta): estatísticas por partida, histórico no PostgreSQL, XP, níveis e conquistas calculados no servidor, perfil com histórico e recordes. Recompensas só visuais (títulos, molduras, cores do tabuleiro), sem vantagem no jogo. Identidade é o código do navegador (sem conta); login entre aparelhos fica para depois.
 - Código modular para: anúncios entre partidas, pacotes temáticos de palavras, skins de cor do tabuleiro.
 
 ## 5. Arquitetura
@@ -36,4 +36,5 @@
 - `progressao/catalogo` (servidor) → conquistas (critério, categoria) e recompensas visuais (título, moldura, tabuleiro) por nível ou conquista.
 - `progressao/regras` (servidor) → XP por partida, limite diário e curva de níveis; todos os números de balanceamento.
 - `Rede` → cliente Socket.io com a mesma interface do `Game`; `Lobby` → criar/entrar na sala.
+- `Progresso` (cliente) → XP no placar final, selo de nível e tela do perfil; só exibe o que o servidor calcula.
 - `UI` → estado visual local (seleção/hover) e renderização, nos modos local e online.
