@@ -36,6 +36,9 @@ const TEMPO_SALA_VAZIA_MS = 10 * 60 * 1000;
 // No desligamento, quanto esperar os aparelhos confirmarem o aviso de reinício. Quem confirma
 // antes encurta a espera; o Render dá 30 s até forçar o fim.
 const ESPERA_AVISO_MS = 1000;
+// Bloqueios contra abuso viram uma linha de log por minuto, com a contagem de cada tipo.
+const INTERVALO_LIMITES_MS = 60 * 1000;
+const TIPOS_BLOQUEIO = ['origem', 'conexoes', 'criar', 'entrar', 'perfil', 'chat'];
 const TAMANHO_MAX_SINAL = 20000;
 const TAMANHO_MAX_TOKEN = 100;
 const TAMANHO_MAX_MENSAGEM_SOCKET = 64 * 1024; // sinais de voz cabem com folga
@@ -251,6 +254,7 @@ function criarServidor(opcoes) {
   const limiteCriar = criarLimitador(limites.criar);
   const limiteEntrar = criarLimitador(limites.entrarErrado);
   const limitePerfil = criarLimitador(limites.perfil);
+  const bloqueios = Log.criarContador(log, 'limites_atingidos', TIPOS_BLOQUEIO, opcoes.intervaloLimitesMs || INTERVALO_LIMITES_MS);
   const conexoesPorIp = new Map();
   setInterval(() => { limiteCriar.limpar(); limiteEntrar.limpar(); limitePerfil.limpar(); }, 5 * 60 * 1000).unref();
 
@@ -293,8 +297,14 @@ function criarServidor(opcoes) {
   const io = new Server(servidorHttp, {
     maxHttpBufferSize: TAMANHO_MAX_MENSAGEM_SOCKET,
     allowRequest: (req, aceitar) => {
-      if (!origemPermitida(req, env)) return aceitar('Origem não permitida', false);
-      if ((conexoesPorIp.get(ipDe(req)) || 0) >= limites.conexoes) return aceitar('Conexões demais', false);
+      if (!origemPermitida(req, env)) {
+        bloqueios.contar('origem');
+        return aceitar('Origem não permitida', false);
+      }
+      if ((conexoesPorIp.get(ipDe(req)) || 0) >= limites.conexoes) {
+        bloqueios.contar('conexoes');
+        return aceitar('Conexões demais', false);
+      }
       aceitar(null, true);
     },
     cors: { origin: (origem, pronto) => pronto(null, !origem || String(env.ORIGENS_PERMITIDAS || '').split(',').map((o) => o.trim()).indexOf(origem) !== -1) }
@@ -363,7 +373,7 @@ function criarServidor(opcoes) {
     socket.on('criar', (dados, ack) => {
       dados = dados || {};
       if (!tokenValido(dados.token)) return responder(ack, { ok: false, erro: 'Aparelho sem identificação. Recarregue a página.' });
-      if (limiteCriar.estourou(ip)) return responder(ack, { ok: false, erro: 'Muitas salas criadas daqui. Espere um minuto.' });
+      if (limiteCriar.estourou(ip)) { bloqueios.contar('criar'); return responder(ack, { ok: false, erro: 'Muitas salas criadas daqui. Espere um minuto.' }); }
       limiteCriar.contar(ip);
       const r = salas.criarSala(dados.token, dados.nome);
       if (!r.ok) return responder(ack, r);
@@ -377,7 +387,7 @@ function criarServidor(opcoes) {
       dados = dados || {};
       if (!tokenValido(dados.token)) return responder(ack, { ok: false, erro: 'Aparelho sem identificação. Recarregue a página.' });
       // Só tentativas que falham contam: quem joga normalmente nunca esbarra no limite.
-      if (limiteEntrar.estourou(ip)) return responder(ack, { ok: false, erro: 'Muitas tentativas. Espere um minuto e confira o código.' });
+      if (limiteEntrar.estourou(ip)) { bloqueios.contar('entrar'); return responder(ack, { ok: false, erro: 'Muitas tentativas. Espere um minuto e confira o código.' }); }
       const r = salas.entrar(dados.codigo, dados.token, dados.nome);
       if (!r.ok) {
         limiteEntrar.contar(ip);
@@ -405,6 +415,7 @@ function criarServidor(opcoes) {
 
     socket.on('chat', (dados, ack) => {
       const r = salas.enviarMensagem(socket.data.codigo, socket.data.token, dados && dados.texto);
+      if (r.limite) bloqueios.contar(r.limite);
       responder(ack, r.ok ? { ok: true } : { ok: false, erro: r.erro });
       if (r.ok) io.to(r.sala.codigo).emit('chat', r.mensagem);
     });
@@ -431,7 +442,7 @@ function criarServidor(opcoes) {
       dados = dados || {};
       if (!armazem) return responder(ack, { ok: false, erro: 'O histórico não está disponível neste servidor.' });
       if (!tokenValido(dados.token)) return responder(ack, { ok: false, erro: 'Aparelho sem identificação. Recarregue a página.' });
-      if (limitePerfil.estourou(ip)) return responder(ack, { ok: false, erro: 'Muitos pedidos. Espere um minuto.' });
+      if (limitePerfil.estourou(ip)) { bloqueios.contar('perfil'); return responder(ack, { ok: false, erro: 'Muitos pedidos. Espere um minuto.' }); }
       limitePerfil.contar(ip);
       armazem.perfil(dados.token).then(
         (perfil) => responder(ack, { ok: true, perfil }),
@@ -446,7 +457,7 @@ function criarServidor(opcoes) {
       if (!armazem) return responder(ack, { ok: false, erro: 'O perfil não está disponível neste servidor.' });
       if (!tokenValido(dados.token)) return responder(ack, { ok: false, erro: 'Aparelho sem identificação. Recarregue a página.' });
       if (typeof dados.tipo !== 'string' || typeof dados.id !== 'string') return responder(ack, { ok: false, erro: 'Item inválido.' });
-      if (limitePerfil.estourou(ip)) return responder(ack, { ok: false, erro: 'Muitos pedidos. Espere um minuto.' });
+      if (limitePerfil.estourou(ip)) { bloqueios.contar('perfil'); return responder(ack, { ok: false, erro: 'Muitos pedidos. Espere um minuto.' }); }
       limitePerfil.contar(ip);
       armazem.escolherVisual(dados.token, dados.tipo, dados.id).then(
         (r) => {
@@ -521,6 +532,7 @@ function criarServidor(opcoes) {
       log.info('aviso_reinicio', await avisarReinicio());
       io.close();
       servidorHttp.close();
+      bloqueios.parar();
       await aguardarGravacoes();
       try {
         if (armazem && armazem.fechar) await armazem.fechar();
@@ -540,6 +552,8 @@ module.exports = { criarServidor, servidoresIce, sinalValido, arquivoPublico, or
 if (require.main === module) {
   // Na hospedagem a porta vem de PORT; em casa, 3000.
   const porta = Number(process.env.PORT) || 3000;
+  // Erro não tratado: linha "erro_fatal" em JSON e saída com código 1, para o Render reiniciar.
+  Log.registrarErrosFatais(process, Log.padrao);
   // Com DATABASE_URL a progressão fica no Postgres; sem ela, o jogo roda como antes, sem histórico.
   const armazem = process.env.DATABASE_URL ? require('./progressao/Banco.js').criar(process.env.DATABASE_URL) : null;
   const { servidorHttp, encerrar } = criarServidor({ armazem });

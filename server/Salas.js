@@ -259,7 +259,7 @@ function criarGerenciador(opcoes) {
     if (!texto) return erro('Escreva alguma coisa.');
     if (texto.length > TAMANHO_MAX_MENSAGEM) return erro('Mensagem longa demais (até ' + TAMANHO_MAX_MENSAGEM + ' letras).');
     jogador.envios = jogador.envios.filter((t) => agora - t < JANELA_MENSAGENS_MS);
-    if (jogador.envios.length >= LIMITE_MENSAGENS) return erro('Calma! Espere um pouquinho para mandar outra.');
+    if (jogador.envios.length >= LIMITE_MENSAGENS) return Object.assign(erro('Calma! Espere um pouquinho para mandar outra.'), { limite: 'chat' });
     jogador.envios.push(agora);
     const mensagem = { id: ++sala.seqMensagem, autorId: jogador.id, nome: jogador.nome, texto, em: agora };
     sala.chat.push(mensagem);
