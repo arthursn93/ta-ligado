@@ -49,11 +49,25 @@ Bom saber sobre o plano gratuito:
 - O serviço dorme depois de um tempo sem visitas. O primeiro acesso depois disso demora cerca de um minuto para acordar.
 - As salas ficam na memória do servidor. Se ele dormir, reiniciar ou receber uma versão nova, as salas abertas somem: o jogo volta sozinho para a tela inicial com o aviso "A sala foi encerrada" e a turma cria outra.
 - Quando o Render vai desligar a versão antiga (sinal `SIGTERM`), o servidor avisa na hora os aparelhos conectados: "O jogo está sendo atualizado. Esta sala vai fechar em instantes." Espera no máximo 1 segundo pelas confirmações e desliga; quem não recebeu vê "Reconectando…", como antes. Partidas em andamento não são gravadas, e as que já terminaram acabam de ser gravadas antes de desligar.
+- Enquanto o servidor acorda, a tela mostra "Conectando ao servidor…". Se depois de 1 minuto não der, aparece a opção de tentar de novo ou jogar num aparelho só.
 
 ### Logs
 
-O servidor escreve uma linha JSON por acontecimento importante, para ler em **Logs** no Render (dá para buscar pelo nome do evento): `servidor_iniciado`, `sala_criada`, `partida_iniciada`, `partida_encerrada`, `encerramento_recebido` (com quantas salas, jogadores conectados e partidas em andamento havia), `aviso_reinicio` (quantos aparelhos confirmaram), `encerramento_concluido` e os erros (`erro_…`, com `"nivel":"erro"`). Os logs nunca levam nomes, códigos de sala, tokens ou IPs, e endereços com senha são trocados por `[endereço]` (`server/log.js`).
-- Enquanto o servidor acorda, a tela mostra "Conectando ao servidor…". Se depois de 1 minuto não der, aparece a opção de tentar de novo ou jogar num aparelho só.
+O servidor escreve uma linha JSON por acontecimento, para ler em **Logs** no Render. Dá para buscar pelo nome do evento (por exemplo `erro_` ou `limites_atingidos`). O código fica em `server/log.js`.
+
+| Evento | Quando aparece | O que traz |
+| --- | --- | --- |
+| `servidor_iniciado` | O servidor ligou | Porta e se a progressão (banco) está ligada |
+| `sala_criada` | Alguém criou uma sala | Quantas salas existem agora |
+| `partida_iniciada` / `partida_encerrada` | Início e fim de uma partida | Jogadores conectados; no fim, se foi concluída ou interrompida e quantas cartas foram jogadas |
+| `limites_atingidos` | No máximo uma vez por minuto, só se algum bloqueio contra abuso aconteceu | Quantas vezes cada proteção recusou algo no minuto: `criar` (salas demais), `entrar` (códigos errados demais), `perfil` (pedidos demais), `chat` (mensagens rápidas demais), `conexoes` (conexões demais do mesmo IP), `origem` (conexão vinda de outro site) |
+| `encerramento_recebido` / `aviso_reinicio` / `encerramento_concluido` | O Render mandou o servidor desligar | Salas, jogadores e partidas em andamento; quantos aparelhos receberam o aviso; quanto tempo levou |
+| `erro_…` (`"nivel":"erro"`) | Algo deu errado e o jogo seguiu | Mensagem e as primeiras linhas de onde aconteceu |
+| `erro_fatal` | Um erro não tratado derrubou o servidor | O mesmo; o processo sai com código 1 e o Render o liga de novo, como antes |
+
+O que nunca entra nos logs: nomes de jogadores, códigos de sala, mensagens do chat, tokens, IPs, senhas e endereços com credenciais. Nas mensagens de erro, endereços (como uma URL de banco) viram `[endereço]` e IPs viram `[ip]`. Os bloqueios são somados por minuto para um ataque não encher os logs; o Render descarta o que passar de 6.000 linhas por minuto ([documentação](https://render.com/docs/logging)).
+
+Por quanto tempo o Render guarda os logs depende do plano do **workspace**, não do serviço: 7 dias no Hobby, 14 no Pro e 30 no Scale/Enterprise, segundo a [documentação do Render](https://render.com/docs/logging) (consultada em outubro de 2026). Qual desses vale aqui depende do plano do workspace no painel do Render, que não foi confirmado neste repositório. Logs mais antigos que isso não ficam disponíveis.
 
 ### Proteções do servidor
 
