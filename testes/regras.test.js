@@ -65,3 +65,34 @@ test('limite diário: só a participação a partir da 11ª partida', () => {
   assert.equal(r.limitado, true);
   assert.equal(r.total, Regras.XP.participacao);
 });
+
+const Catalogo = require('../server/progressao/catalogo.js');
+
+test('catálogo: ids únicos e toda recompensa tem condição válida', () => {
+  const ids = Catalogo.CONQUISTAS.map((c) => c.id).concat(Catalogo.RECOMPENSAS.map((r) => r.id));
+  assert.equal(new Set(ids).size, ids.length);
+  for (const r of Catalogo.RECOMPENSAS) {
+    assert.ok(Catalogo.TIPOS_VISUAIS.includes(r.tipo), r.id);
+    if (r.condicao.conquista) assert.ok(Catalogo.conquista(r.condicao.conquista), r.id);
+    else assert.ok(r.condicao.nivel >= 1, r.id);
+  }
+  // Toda skin de tabuleiro do catálogo existe no Theme.js do navegador.
+  const tema = require('fs').readFileSync(require('path').join(__dirname, '..', 'js', 'Theme.js'), 'utf8');
+  for (const r of Catalogo.RECOMPENSAS.filter((x) => x.tipo === 'tabuleiro')) assert.ok(tema.includes("id: '" + r.id + "'"), r.id);
+});
+
+test('conquista de nível em cascata: o XP das conquistas pode subir o nível', () => {
+  // 990 XP + 15 de uma conquista passa de 1000: libera Mestre das Pistas na mesma partida.
+  const ctx = { valida: true, partida: { maiorSequencia: 0, acertos: 0, tentativas: 25 }, eu: { pistasDadas: 0, pistasCertas: 0 },
+    validas: 10, pistasCertas: 1, melhorAnterior: 30, xp: 990 };
+  const jaTem = ['primeira_ligacao', 'estreia', 'subiu_de_nivel'];
+  const r = Catalogo.avaliar(ctx, new Set(jaTem));
+  assert.deepEqual(r.novas, ['ate_o_fim', 'nivel_5']);
+  assert.equal(r.xpExtra, 30);
+  assert.deepEqual(Catalogo.avaliar(ctx, new Set(jaTem.concat(r.novas))).novas, [], 'não repete');
+});
+
+test('visual padrão e item que saiu do catálogo', () => {
+  const v = Catalogo.visualEfetivo({ moldura: 'nao_existe', tabuleiro: 'oceano' }, 2, new Set());
+  assert.deepEqual(v, { titulo: 'titulo_nivel_2', moldura: 'moldura_nenhuma', tabuleiro: 'padrao' }, 'oceano só no nível 3');
+});

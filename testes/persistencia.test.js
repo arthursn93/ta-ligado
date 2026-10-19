@@ -110,21 +110,24 @@ function contrato(nome, fabricar) {
   test(nome + ': XP da partida, nível e detalhe do cálculo', async () => {
     const a = await fabricar();
     try {
-      // 20 acertos: Ana (dador de todas) 30 + 40 + 20×5 + 20 = 190; Bia 30 + 40 + 20 = 90.
+      // 20 acertos: Ana (dador de todas) 30 + 40 + 20×5 + 20 = 190, mais 4 conquistas (60) = 250.
+      // Bia: 30 + 40 + 20 = 90, mais Estreia e Sintonia (30); chega a 120, nível 2, e ganha Subiu de nível (15) = 135.
       const r = await a.gravarPartida(resumo(vinte));
       const ana = r.jogadores.find((j) => j.tokenHash === Perfil.hashToken('tA'));
       const bia = r.jogadores.find((j) => j.tokenHash === Perfil.hashToken('tB'));
-      assert.equal(ana.xpGanho, 190);
-      assert.deepEqual(ana.detalhe.map((d) => d.motivo), ['participacao', 'acertos_turma', 'pistas_certas', 'desafio']);
+      assert.equal(ana.xpGanho, 250);
+      assert.deepEqual(ana.detalhe.map((d) => d.motivo), ['participacao', 'acertos_turma', 'pistas_certas', 'desafio',
+        'conquista', 'conquista', 'conquista', 'conquista']);
+      assert.deepEqual(ana.conquistas.map((c) => c.id).sort(), ['estreia', 'primeira_ligacao', 'sintonia', 'subiu_de_nivel']);
       assert.equal(ana.nivel.nivel, 2);
       assert.equal(ana.subiuDeNivel, true);
-      assert.equal(bia.xpGanho, 90);
-      assert.equal(bia.nivel.nivel, 1);
-      assert.equal(bia.nivel.falta, 10);
-      assert.equal(bia.subiuDeNivel, false);
+      assert.equal(bia.xpGanho, 135);
+      assert.deepEqual(bia.conquistas.map((c) => c.id), ['estreia', 'sintonia', 'subiu_de_nivel']);
+      assert.equal(bia.nivel.falta, 165);
       const perfil = await a.perfil('tA');
-      assert.equal(perfil.nivel.xp, 190);
-      assert.equal(perfil.historico[0].xpGanho, 190);
+      assert.equal(perfil.nivel.xp, 250);
+      assert.equal(perfil.historico[0].xpGanho, 250);
+      assert.equal(perfil.conquistas.filter((c) => c.desbloqueada).length, 4);
     } finally {
       await a.fechar();
     }
@@ -138,8 +141,8 @@ function contrato(nome, fabricar) {
       const r = resumo(vinte, { inicio: 5000, fim: 6000 });
       await a.gravarPartida(r);
       await a.gravarPartida(r);
-      assert.equal((await a.perfil('tB')).nivel.xp, 90, 'só a partida válida, uma vez');
-      assert.equal((await a.perfil('tA')).nivel.xp, 380);
+      assert.equal((await a.perfil('tB')).nivel.xp, 135, 'só a partida válida, uma vez');
+      assert.equal((await a.perfil('tA')).nivel.xp, 250 + 190, 'conquistas não se repetem');
     } finally {
       await a.fechar();
     }
@@ -150,12 +153,48 @@ function contrato(nome, fabricar) {
     const hora = 60 * 60 * 1000;
     try {
       for (let i = 0; i < 11; i++) await a.gravarPartida(resumo(vinte, { inicio: i * hora, fim: i * hora + 1000 }));
-      assert.equal((await a.perfil('tB')).nivel.xp, 10 * 90 + 30);
-      // Passadas 24 horas da primeira, o XP cheio volta.
+      // 135 na primeira (com conquistas), 90 em cada uma até a 10ª (que dá Sempre até o fim, +15), 30 na 11ª.
+      assert.equal((await a.perfil('tB')).nivel.xp, 135 + 8 * 90 + 105 + 30);
+      // Passadas 24 horas, o XP cheio volta.
       const r = await a.gravarPartida(resumo(vinte, { inicio: 25 * hora, fim: 25 * hora + 1000 }));
       const bia = r.jogadores.find((j) => j.tokenHash === Perfil.hashToken('tB'));
-      assert.equal(bia.xpGanho, 90);
       assert.equal(bia.limitado, false);
+      assert.ok(bia.detalhe.some((d) => d.motivo === 'acertos_turma'));
+    } finally {
+      await a.fechar();
+    }
+  });
+
+  test(nome + ': escolher item visual: só liberado, do tipo certo, e fica salvo', async () => {
+    const a = await fabricar();
+    try {
+      assert.ok((await a.escolherVisual('tA', 'moldura', 'moldura_bronze')).erro, 'sem partida, sem itens');
+      await a.gravarPartida(resumo(vinte)); // Ana vai a 250 XP: nível 2
+      assert.equal((await a.escolherVisual('tA', 'moldura', 'moldura_prata')).erro, 'Esse item ainda está bloqueado.');
+      assert.equal((await a.escolherVisual('tA', 'tabuleiro', 'moldura_bronze')).erro, 'Item não encontrado.');
+      assert.equal((await a.escolherVisual('tA', 'poder', 'x')).erro, 'Tipo de item inválido.');
+      const r = await a.escolherVisual('tA', 'moldura', 'moldura_bronze');
+      assert.equal(r.perfil.visual.moldura, 'moldura_bronze');
+      const perfil = await a.perfil('tA');
+      assert.equal(perfil.visual.moldura, 'moldura_bronze');
+      assert.equal(perfil.visual.titulo, 'titulo_nivel_2', 'título padrão acompanha o nível');
+      assert.equal(perfil.recompensas.find((x) => x.id === 'moldura_prata').liberada, false);
+      assert.equal((await a.perfil('tB')).visual.moldura, 'moldura_nenhuma', 'a escolha é de cada um');
+    } finally {
+      await a.fechar();
+    }
+  });
+
+  test(nome + ': recorde pessoal, mão certeira e tabuleiro perfeito', async () => {
+    const a = await fabricar();
+    try {
+      await a.gravarPartida(resumo(vinte, { inicio: 0, fim: 10 }));
+      const r = await a.gravarPartida(resumo(Array(25).fill(true), { inicio: 20, fim: 30 }));
+      const ana = r.jogadores.find((j) => j.tokenHash === Perfil.hashToken('tA'));
+      assert.deepEqual(ana.conquistas.map((c) => c.id).sort(), ['embalados', 'mao_certeira', 'recorde_pessoal', 'tabuleiro_perfeito']);
+      const perfil = await a.perfil('tA');
+      assert.equal(perfil.recompensas.find((x) => x.id === 'titulo_perfeccionista').liberada, true);
+      assert.equal((await a.escolherVisual('tA', 'titulo', 'titulo_perfeccionista')).perfil.visual.titulo, 'titulo_perfeccionista');
     } finally {
       await a.fechar();
     }
@@ -182,7 +221,7 @@ if (process.env.TEST_DATABASE_URL) {
   const Banco = require('../server/progressao/Banco.js');
   async function bancoLimpo() {
     const pool = new Pool({ connectionString: process.env.TEST_DATABASE_URL });
-    await pool.query('DROP TABLE IF EXISTS partida_jogadores, partidas, jogadores, migracoes');
+    await pool.query('DROP TABLE IF EXISTS conquistas_jogador, partida_jogadores, partidas, jogadores, migracoes');
     await pool.end();
     const b = Banco.criar(process.env.TEST_DATABASE_URL);
     await b.pronto();
@@ -215,7 +254,7 @@ if (process.env.TEST_DATABASE_URL) {
       assert.equal((await b.perfil('tA')).cartas, 0, 'a linha da Ana não pode ter ficado');
       r.jogadores[1].nome = 'Bia';
       assert.equal((await b.gravarPartida(r)).gravada, true, 'tentar de novo funciona');
-      assert.equal((await b.perfil('tA')).nivel.xp, 30 + 40 + 100 + 20, 'XP somado uma vez só');
+      assert.equal((await b.perfil('tA')).nivel.xp, 250, 'XP somado uma vez só');
     } finally {
       await b.fechar();
     }
@@ -234,8 +273,8 @@ function pedir(url, evento, dados) {
   return new Promise((ok) => s.emit(evento, dados, (r) => { s.close(); ok(r); }));
 }
 
-function jogarInteira(salas, sala) {
-  for (let i = 0; i < 25; i++) {
+function jogarInteira(salas, sala, desde) {
+  for (let i = desde || 0; i < 25; i++) {
     const dador = sala.jogadores.find((j) => j.id === sala.dadorId).token;
     const secreta = salas.visaoPara(sala, dador).jogo.coordenadaSecreta;
     salas.agir(sala.codigo, dador, { tipo: 'DAR_PISTA', pista: String.fromCharCode(97 + i) + 'zqxw' });
@@ -276,6 +315,30 @@ test('servidor: banco fora do ar tenta de novo e não derruba a sala', async (t)
   assert.equal(falhas, 3);
   assert.equal((await memoria.perfil('tA')).partidas.concluidas, 1);
   assert.ok(srv.salas.iniciar(sala.codigo, 'tA').ok);
+});
+
+test('servidor: o aparelho não consegue escolher item bloqueado nem mandar XP', async (t) => {
+  const armazem = Memoria.criar();
+  const srv = await subir({ armazem });
+  t.after(() => srv.io.close());
+  const { sala } = srv.salas.criarSala('tA', 'Ana');
+  srv.salas.entrar(sala.codigo, 'tB', 'Bia');
+  srv.salas.iniciar(sala.codigo, 'tA');
+  // Campos a mais na ação são ignorados: o servidor só olha tipo e coordenada.
+  const dador = sala.jogadores.find((j) => j.id === sala.dadorId).token;
+  const secreta = srv.salas.visaoPara(sala, dador).jogo.coordenadaSecreta;
+  assert.ok(srv.salas.agir(sala.codigo, dador, { tipo: 'DAR_PISTA', pista: 'azqxw', xp: 99999 }).ok);
+  assert.ok(srv.salas.agir(sala.codigo, dador === 'tA' ? 'tB' : 'tA', { tipo: 'CHUTAR', coordenada: secreta, acertou: false, xp: 99999 }).ok);
+  jogarInteira(srv.salas, sala, 1);
+  await srv.aguardarGravacoes();
+  const bloqueado = await pedir(srv.url, 'perfil:visual', { token: 'tB', tipo: 'moldura', id: 'moldura_ouro' });
+  assert.equal(bloqueado.ok, false);
+  assert.equal((await pedir(srv.url, 'perfil:visual', { token: 'tB', tipo: 'moldura', id: { $ne: 1 } })).ok, false);
+  const ok = await pedir(srv.url, 'perfil:visual', { token: 'tB', tipo: 'moldura', id: 'moldura_bronze' });
+  assert.equal(ok.ok, true);
+  assert.equal(ok.perfil.visual.moldura, 'moldura_bronze');
+  assert.equal(ok.perfil.acertosTurma, 25, 'o resultado vem do Game, não do que o aparelho mandou');
+  assert.ok(ok.perfil.nivel.xp < 1000);
 });
 
 test('servidor sem banco: o perfil avisa que não está disponível', async (t) => {

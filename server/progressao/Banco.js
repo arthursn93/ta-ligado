@@ -67,18 +67,19 @@ function criar(url) {
       const jogadores = [];
       for (const bruta of Perfil.linhasDoResumo(resumo)) {
         // O upsert trava a linha do jogador até o fim da transação: duas salas terminando juntas
-        // com a mesma pessoa somam o XP uma depois da outra.
+        // com a mesma pessoa somam XP e conquistas uma depois da outra.
         const jogador = await cliente.query(
           `INSERT INTO jogadores (token_hash, nome) VALUES ($1, $2)
            ON CONFLICT (token_hash) DO UPDATE SET nome = EXCLUDED.nome, visto_em = now()
-           RETURNING id`,
+           RETURNING id, xp`,
           [bruta.tokenHash, bruta.nome]);
-        const jogadorId = jogador.rows[0].id;
-        const recentes = await cliente.query(
-          `SELECT count(*)::int AS n FROM partida_jogadores pj JOIN partidas p ON p.id = pj.partida_id
-            WHERE pj.jogador_id = $1 AND pj.valida AND p.encerrada_em > to_timestamp($2 / 1000.0)`,
-          [jogadorId, resumo.encerradaEm - Regras.LIMITE_DIARIO.janelaMs]);
-        const l = Perfil.comXp(resumo, bruta, recentes.rows[0].n);
+        const { id: jogadorId, xp: xpAntes } = jogador.rows[0];
+        const anteriores = await linhasDoJogador(cliente, jogadorId);
+        const desde = resumo.encerradaEm - Regras.LIMITE_DIARIO.janelaMs;
+        const recentes = anteriores.filter((l) => l.valida && l.encerradaEm > desde).length;
+        const jaTem = new Set((await conquistasDoJogador(cliente, jogadorId)).map((c) => c.id));
+        const r = Perfil.comConquistas(resumo, Perfil.comXp(resumo, bruta, recentes), anteriores, xpAntes, jaTem);
+        const l = r.linha;
         await cliente.query(
           `INSERT INTO partida_jogadores (partida_id, jogador_id, nome, cartas_presente, acertos_turma, erros_turma,
              pistas_dadas, pistas_certas, palpites, palpites_certos, presente_no_fim, participou, valida, xp_ganho, xp_detalhe)
@@ -86,8 +87,14 @@ function criar(url) {
           [resumo.id, jogadorId, l.nome, l.cartasPresente, l.acertosTurma, l.errosTurma,
             l.pistasDadas, l.pistasCertas, l.palpites, l.palpitesCertos, l.presenteNoFim, l.participou,
             l.valida, l.xpGanho, JSON.stringify(l.xpDetalhe)]);
+        for (const id of r.novas) {
+          await cliente.query(
+            `INSERT INTO conquistas_jogador (jogador_id, conquista_id, partida_id, desbloqueada_em)
+             VALUES ($1, $2, $3, to_timestamp($4 / 1000.0))`,
+            [jogadorId, id, resumo.id, resumo.encerradaEm]);
+        }
         const xp = await cliente.query('UPDATE jogadores SET xp = xp + $2 WHERE id = $1 RETURNING xp', [jogadorId, l.xpGanho]);
-        jogadores.push(Perfil.resultadoXp(l, xp.rows[0].xp));
+        jogadores.push(Perfil.resultadoXp(l, xp.rows[0].xp, r.novas));
       }
       await cliente.query('COMMIT');
       return { gravada: true, jogadores };
@@ -99,19 +106,16 @@ function criar(url) {
     }
   }
 
-  async function perfil(token) {
-    await migrado;
-    const h = Perfil.hashToken(token);
-    const r = await pool.query(
-      `SELECT j.nome AS nome_atual, j.xp AS xp_atual, pj.xp_ganho, p.id, p.estado, p.encerrada_em, p.total_cartas, p.acertos, p.erros, p.maior_sequencia,
-              p.jogadores, pj.cartas_presente, pj.acertos_turma, pj.erros_turma, pj.pistas_dadas, pj.pistas_certas,
-              pj.palpites, pj.palpites_certos, pj.presente_no_fim, pj.participou
-         FROM jogadores j
-         JOIN partida_jogadores pj ON pj.jogador_id = j.id
-         JOIN partidas p ON p.id = pj.partida_id
-        WHERE j.token_hash = $1
-        ORDER BY p.encerrada_em DESC`, [h]);
-    const linhas = r.rows.map((x) => ({
+  /** Partidas de um jogador, da mais recente para a mais antiga. `q` é o pool ou um cliente em transação. */
+  async function linhasDoJogador(q, jogadorId) {
+    const r = await q.query(
+      `SELECT p.id, p.estado, p.encerrada_em, p.total_cartas, p.acertos, p.erros, p.maior_sequencia, p.jogadores,
+              pj.cartas_presente, pj.acertos_turma, pj.erros_turma, pj.pistas_dadas, pj.pistas_certas,
+              pj.palpites, pj.palpites_certos, pj.presente_no_fim, pj.participou, pj.valida, pj.xp_ganho
+         FROM partida_jogadores pj JOIN partidas p ON p.id = pj.partida_id
+        WHERE pj.jogador_id = $1
+        ORDER BY p.encerrada_em DESC`, [jogadorId]);
+    return r.rows.map((x) => ({
       partidaId: x.id,
       estado: x.estado,
       encerradaEm: x.encerrada_em.getTime(),
@@ -129,15 +133,57 @@ function criar(url) {
       palpitesCertos: x.palpites_certos,
       presenteNoFim: x.presente_no_fim,
       participou: x.participou,
+      valida: x.valida,
       xpGanho: x.xp_ganho
     }));
-    return Perfil.montar(r.rows.length ? r.rows[0].nome_atual : null, linhas, r.rows.length ? r.rows[0].xp_atual : 0);
+  }
+
+  async function conquistasDoJogador(q, jogadorId) {
+    const r = await q.query('SELECT conquista_id, desbloqueada_em FROM conquistas_jogador WHERE jogador_id = $1', [jogadorId]);
+    return r.rows.map((x) => ({ id: x.conquista_id, em: x.desbloqueada_em.getTime() }));
+  }
+
+  async function perfil(token) {
+    await migrado;
+    const j = await pool.query('SELECT id, nome, xp, visual FROM jogadores WHERE token_hash = $1', [Perfil.hashToken(token)]);
+    if (j.rowCount === 0) return Perfil.montar(null, [], 0, [], {});
+    const eu = j.rows[0];
+    return Perfil.montar(eu.nome, await linhasDoJogador(pool, eu.id), eu.xp, await conquistasDoJogador(pool, eu.id), eu.visual);
+  }
+
+  /** Escolhe um item visual já liberado. O servidor confere nível e conquistas antes de gravar. */
+  async function escolherVisual(token, tipo, id) {
+    await migrado;
+    const cliente = await pool.connect();
+    try {
+      await cliente.query('BEGIN');
+      const j = await cliente.query('SELECT id, xp, visual FROM jogadores WHERE token_hash = $1 FOR UPDATE', [Perfil.hashToken(token)]);
+      if (j.rowCount === 0) {
+        await cliente.query('ROLLBACK');
+        return { erro: 'Jogue uma partida para liberar itens.' };
+      }
+      const eu = j.rows[0];
+      const r = Perfil.escolher(eu.visual, tipo, id, eu.xp, await conquistasDoJogador(cliente, eu.id));
+      if (r.erro) {
+        await cliente.query('ROLLBACK');
+        return r;
+      }
+      await cliente.query('UPDATE jogadores SET visual = $2 WHERE id = $1', [eu.id, JSON.stringify(r.escolhido)]);
+      await cliente.query('COMMIT');
+    } catch (e) {
+      await cliente.query('ROLLBACK').catch(() => {});
+      throw e;
+    } finally {
+      cliente.release();
+    }
+    return { perfil: await perfil(token) };
   }
 
   return {
     pronto: () => migrado,
     gravarPartida,
     perfil,
+    escolherVisual,
     fechar: () => pool.end()
   };
 }

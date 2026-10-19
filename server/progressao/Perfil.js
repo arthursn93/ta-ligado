@@ -7,6 +7,7 @@
 const crypto = require('crypto');
 const { precisao } = require('./Partida.js');
 const Regras = require('./regras.js');
+const Catalogo = require('./catalogo.js');
 
 const TAMANHO_HISTORICO = 20;
 
@@ -49,8 +50,34 @@ function comXp(resumo, linha, validasRecentes) {
   return Object.assign({}, linha, { valida: r.valida, xpGanho: r.total, xpDetalhe: r.detalhe, limitado: !!r.limitado });
 }
 
+/**
+ * Conquistas novas que esta partida libera, com o XP delas somado à linha.
+ * Só partida válida libera conquista, e só partidas válidas contam nos totais.
+ * `anteriores` = linhas do jogador antes desta; `xpAntes` = XP total antes desta; `jaTem` = ids já desbloqueados.
+ */
+function comConquistas(resumo, linha, anteriores, xpAntes, jaTem) {
+  if (!linha.valida) return { linha, novas: [] };
+  const validas = anteriores.filter((l) => l.valida);
+  const ctx = {
+    valida: true,
+    partida: resumo,
+    eu: linha,
+    validas: validas.length + 1,
+    pistasCertas: validas.reduce((s, l) => s + l.pistasCertas, 0) + linha.pistasCertas,
+    melhorAnterior: validas.length ? Math.max.apply(null, validas.map((l) => l.acertos)) : null,
+    xp: xpAntes + linha.xpGanho
+  };
+  const r = Catalogo.avaliar(ctx, jaTem);
+  if (r.novas.length === 0) return { linha, novas: [] };
+  const extras = r.novas.map((id) => ({ motivo: 'conquista', id, xp: Catalogo.CONQUISTA_XP }));
+  return {
+    linha: Object.assign({}, linha, { xpGanho: linha.xpGanho + r.xpExtra, xpDetalhe: linha.xpDetalhe.concat(extras) }),
+    novas: r.novas
+  };
+}
+
 /** O que a partida rendeu para um jogador, para mostrar no placar final. */
-function resultadoXp(linha, xpTotal) {
+function resultadoXp(linha, xpTotal, novas) {
   const antes = Regras.nivel(xpTotal - linha.xpGanho);
   const depois = Regras.nivel(xpTotal);
   return {
@@ -60,7 +87,11 @@ function resultadoXp(linha, xpTotal) {
     xpGanho: linha.xpGanho,
     detalhe: linha.xpDetalhe,
     nivel: depois,
-    subiuDeNivel: depois.nivel > antes.nivel
+    subiuDeNivel: depois.nivel > antes.nivel,
+    conquistas: (novas || []).map((id) => {
+      const c = Catalogo.conquista(id);
+      return { id, nome: c.nome, descricao: c.descricao };
+    })
   };
 }
 
@@ -73,7 +104,10 @@ function valeGravar(resumo) {
  * Monta o perfil. `linhas` vêm da mais recente para a mais antiga.
  * Recordes contam só partidas concluídas em que a pessoa estava no fim.
  */
-function montar(nome, linhas, xp) {
+function montar(nome, linhas, xp, conquistas, escolhido) {
+  const nivel = Regras.nivel(xp || 0);
+  const minhas = new Map((conquistas || []).map((c) => [c.id, c.em]));
+  const ids = new Set(minhas.keys());
   const t = { cartas: 0, acertosTurma: 0, errosTurma: 0, pistasDadas: 0, pistasCertas: 0, palpites: 0, palpitesCertos: 0 };
   const partidas = { concluidas: 0, saiuAntes: 0, interrompidas: 0 };
   let melhorPontuacao = null;
@@ -96,7 +130,15 @@ function montar(nome, linhas, xp) {
   }
   return {
     nome: nome || null,
-    nivel: Regras.nivel(xp || 0),
+    nivel,
+    conquistas: Catalogo.CONQUISTAS.map((c) => ({
+      id: c.id, nome: c.nome, descricao: c.descricao, categoria: c.categoria, xp: Catalogo.CONQUISTA_XP,
+      desbloqueada: minhas.has(c.id), em: minhas.get(c.id) || null
+    })),
+    recompensas: Catalogo.RECOMPENSAS.map((r) => ({
+      id: r.id, tipo: r.tipo, nome: r.nome, condicao: r.condicao, liberada: Catalogo.liberada(r, nivel.nivel, ids)
+    })),
+    visual: Catalogo.visualEfetivo(escolhido, nivel.nivel, ids),
     partidas,
     cartas: t.cartas,
     acertosTurma: t.acertosTurma,
@@ -124,4 +166,18 @@ function montar(nome, linhas, xp) {
   };
 }
 
-module.exports = { hashToken, linhasDoResumo, comXp, resultadoXp, valeGravar, montar, TAMANHO_HISTORICO };
+/**
+ * Confere se o jogador pode usar o item: existe, é do tipo certo e está liberado.
+ * Devolve o objeto de escolhas atualizado, ou { erro }.
+ */
+function escolher(escolhido, tipo, id, xp, conquistas) {
+  if (Catalogo.TIPOS_VISUAIS.indexOf(tipo) === -1) return { erro: 'Tipo de item inválido.' };
+  const item = Catalogo.recompensa(id);
+  if (!item || item.tipo !== tipo) return { erro: 'Item não encontrado.' };
+  if (!Catalogo.liberada(item, Regras.nivel(xp).nivel, new Set(conquistas.map((c) => c.id)))) {
+    return { erro: 'Esse item ainda está bloqueado.' };
+  }
+  return { escolhido: Object.assign({}, escolhido, { [tipo]: id }) };
+}
+
+module.exports = { hashToken, linhasDoResumo, comXp, comConquistas, resultadoXp, escolher, valeGravar, montar, TAMANHO_HISTORICO };
