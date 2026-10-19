@@ -52,7 +52,7 @@ jobs:
     env:
       PG_BIN: /usr/lib/postgresql/18/bin
       TESTE_URL: postgresql://postgres@localhost:5432/restauracao
-      SAIDA: ${{ runner.temp }}/backup
+      SAIDA: /tmp/backup-banco
 
     steps:
       - uses: actions/checkout@v4
