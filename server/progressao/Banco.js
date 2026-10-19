@@ -151,6 +151,13 @@ function criar(url) {
     return Perfil.montar(eu.nome, await linhasDoJogador(pool, eu.id), eu.xp, await conquistasDoJogador(pool, eu.id), eu.visual);
   }
 
+  async function selo(token) {
+    await migrado;
+    const j = await pool.query('SELECT id, xp, visual FROM jogadores WHERE token_hash = $1', [Perfil.hashToken(token)]);
+    if (j.rowCount === 0) return null;
+    return Perfil.selo(j.rows[0].xp, await conquistasDoJogador(pool, j.rows[0].id), j.rows[0].visual);
+  }
+
   /** Escolhe um item visual já liberado. O servidor confere nível e conquistas antes de gravar. */
   async function escolherVisual(token, tipo, id) {
     await migrado;
@@ -183,6 +190,7 @@ function criar(url) {
     pronto: () => migrado,
     gravarPartida,
     perfil,
+    selo,
     escolherVisual,
     fechar: () => pool.end()
   };

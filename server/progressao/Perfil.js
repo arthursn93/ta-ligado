@@ -180,4 +180,11 @@ function escolher(escolhido, tipo, id, xp, conquistas) {
   return { escolhido: Object.assign({}, escolhido, { [tipo]: id }) };
 }
 
-module.exports = { hashToken, linhasDoResumo, comXp, comConquistas, resultadoXp, escolher, valeGravar, montar, TAMANHO_HISTORICO };
+/** O que os outros veem ao lado do nome na sala: nível, título escolhido e moldura. */
+function selo(xp, conquistas, escolhido) {
+  const nivel = Regras.nivel(xp || 0).nivel;
+  const visual = Catalogo.visualEfetivo(escolhido, nivel, new Set((conquistas || []).map((c) => c.id)));
+  return { nivel, titulo: Catalogo.recompensa(visual.titulo).nome, moldura: visual.moldura };
+}
+
+module.exports = { hashToken, linhasDoResumo, comXp, comConquistas, resultadoXp, escolher, selo, valeGravar, montar, TAMANHO_HISTORICO };

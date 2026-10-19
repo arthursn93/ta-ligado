@@ -43,7 +43,10 @@ var Lobby = (function () {
     '    <button type="button" class="botao botao-primario botao-largo" data-lobby="criar">Criar uma sala nova</button>',
     '    <div class="erro-campo" role="alert"></div>',
     '  </form>',
-    '  <button type="button" class="botao botao-fantasma" data-lobby="local">Jogar num aparelho só</button>',
+    '  <div class="lobby-extras">',
+    '    <button type="button" class="botao botao-fantasma" data-lobby="perfil">Meu perfil</button>',
+    '    <button type="button" class="botao botao-fantasma" data-lobby="local">Jogar num aparelho só</button>',
+    '  </div>',
     '  <a class="lobby-rodape" href="privacidade.html">Privacidade e termos de uso</a>',
     '</div>'
   ].join('');
@@ -62,7 +65,10 @@ var Lobby = (function () {
     '    <div class="lobby-acoes"></div>',
     '    <div class="erro-campo" role="alert"></div>',
     '  </section>',
-    '  <button type="button" class="botao botao-fantasma" data-lobby="sair">Sair da sala</button>',
+    '  <div class="lobby-extras">',
+    '    <button type="button" class="botao botao-fantasma" data-lobby="perfil">Meu perfil</button>',
+    '    <button type="button" class="botao botao-fantasma" data-lobby="sair">Sair da sala</button>',
+    '  </div>',
     '</div>'
   ].join('');
 
@@ -105,8 +111,9 @@ var Lobby = (function () {
 
       raiz.querySelector('.lista-jogadores').innerHTML = sala.jogadores.map(function (j) {
         return '<li class="' + (j.online ? '' : 'is-offline') + '" data-jogador-id="' + esc(j.id) + '">' +
-          '<span class="avatar">' + esc(j.nome.charAt(0).toUpperCase()) + '</span>' +
+          '<span class="avatar' + Progresso.classeMoldura(j) + '">' + esc(j.nome.charAt(0).toUpperCase()) + '</span>' +
           '<span class="jogador-nome">' + esc(j.nome) + (j.id === sala.euId ? ' <small>(você)</small>' : '') + '</span>' +
+          Progresso.selo(j) +
           (opcoes.social ? opcoes.social.iconeVoz(j) : '') +
           (j.id === sala.anfitriaoId ? '<span class="selo-anfitriao" title="Anfitrião">👑</span>' : '') +
           (j.online ? '' : '<small class="jogador-status">saiu</small>') +
@@ -166,6 +173,9 @@ var Lobby = (function () {
           break;
         case 'sair':
           rede.sair().then(function () { window.location.href = window.location.pathname; });
+          break;
+        case 'perfil':
+          Progresso.abrir(rede);
           break;
         case 'local':
           desligar();
