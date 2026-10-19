@@ -12,6 +12,7 @@ const path = require('path');
 const { Pool } = require('pg');
 const Perfil = require('./Perfil.js');
 const Regras = require('./regras.js');
+const log = require('../log.js').padrao;
 
 const PASTA_MIGRACOES = path.join(__dirname, 'migracoes');
 const TRAVA_MIGRACOES = 7319001; // pg_advisory_lock: duas instâncias subindo juntas não migram em dobro
@@ -30,7 +31,7 @@ async function migrar(pool) {
         await cliente.query(fs.readFileSync(path.join(PASTA_MIGRACOES, arquivo), 'utf8'));
         await cliente.query('INSERT INTO migracoes (nome) VALUES ($1)', [arquivo]);
         await cliente.query('COMMIT');
-        console.log('Migração aplicada: ' + arquivo);
+        log.info('migracao_aplicada', { arquivo });
       } catch (e) {
         await cliente.query('ROLLBACK');
         throw e;
@@ -44,9 +45,10 @@ async function migrar(pool) {
 
 function criar(url) {
   const pool = new Pool({ connectionString: url, max: 5 });
-  pool.on('error', (e) => console.error('Erro na conexão com o banco:', e.message));
+  pool.on('error', (e) => log.erro('erro_conexao_banco', e));
   const migrado = migrar(pool);
-  migrado.catch((e) => console.error('Migração do banco falhou; a progressão não será gravada:', e.message));
+  // Sem migração, a progressão não é gravada; o jogo continua.
+  migrado.catch((e) => log.erro('erro_migracao', e));
 
   async function gravarPartida(resumo) {
     await migrado;

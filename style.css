@@ -734,6 +734,14 @@ button { font: inherit; color: inherit; }
   color: #fff;
   box-shadow: var(--sombra-forte);
 }
+/* O aviso de reinício é mais longo: quebra em duas linhas no celular, em vez de sair da tela. */
+.chip-alerta.chip-longo {
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  border-radius: var(--raio);
+  white-space: normal;
+  text-align: center;
+}
 .barra-sala .botao-pequeno { padding: 8px 14px; font-size: 14px; }
 
 /* ---------- Chat e voz ---------- */

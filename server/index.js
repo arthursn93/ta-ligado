@@ -29,9 +29,13 @@ const path = require('path');
 const zlib = require('zlib');
 const { Server } = require('socket.io');
 const { criarGerenciador } = require('./Salas.js');
+const Log = require('./log.js');
 
 const RAIZ = path.join(__dirname, '..');
 const TEMPO_SALA_VAZIA_MS = 10 * 60 * 1000;
+// No desligamento, quanto esperar os aparelhos confirmarem o aviso de reinício. Quem confirma
+// antes encurta a espera; o Render dá 30 s até forçar o fim.
+const ESPERA_AVISO_MS = 1000;
 const TAMANHO_MAX_SINAL = 20000;
 const TAMANHO_MAX_TOKEN = 100;
 const TAMANHO_MAX_MENSAGEM_SOCKET = 64 * 1024; // sinais de voz cabem com folga
@@ -182,7 +186,9 @@ function criarServidor(opcoes) {
   // Onde a progressão é guardada (Banco ou Memoria). Sem armazém, o jogo funciona sem progressão.
   const armazem = opcoes.armazem || null;
   const esperasGravacao = opcoes.esperasGravacao || ESPERAS_GRAVACAO_MS;
+  const esperaAviso = opcoes.esperaAviso || ESPERA_AVISO_MS;
   const gravacoes = new Set();
+  const log = opcoes.log || Log.padrao;
 
   /** Grava a partida que acabou. A gravação é idempotente, então tentar de novo é seguro. */
   function gravarPartida(resumo) {
@@ -195,7 +201,7 @@ function criarServidor(opcoes) {
           return;
         } catch (e) {
           if (tentativa >= esperasGravacao.length) {
-            console.error('Não deu para gravar a partida ' + resumo.id + ':', e.message);
+            log.erro('erro_gravar_partida', e, { partida: resumo.id, tentativas: tentativa + 1 });
             transmitir(salas.registrarProgresso(resumo.codigoSala, resumo.id, new Map(), true));
             return;
           }
@@ -227,11 +233,17 @@ function criarServidor(opcoes) {
       const sala = salas.definirSelo(codigo, token, await armazem.selo(token));
       if (transmitirDepois) transmitir(sala);
     } catch (e) {
-      console.error('Erro ao ler o selo:', e.message);
+      log.erro('erro_ler_selo', e);
     }
   }
 
-  const salas = criarGerenciador({ criarJogo: opcoes.criarJogo, aoEncerrarPartida: gravarPartida, progressaoAtiva: !!armazem });
+  /** Registra no log como a partida terminou (só números) e grava a progressão. */
+  function partidaEncerrada(resumo) {
+    log.info('partida_encerrada', { estado: resumo.estado, jogadores: resumo.jogadores.length, cartas: resumo.tentativas });
+    gravarPartida(resumo);
+  }
+
+  const salas = criarGerenciador({ criarJogo: opcoes.criarJogo, aoEncerrarPartida: partidaEncerrada, progressaoAtiva: !!armazem, log });
   const tempoSalaVazia = opcoes.tempoSalaVazia || TEMPO_SALA_VAZIA_MS;
   const env = opcoes.env || process.env;
   const iceServers = servidoresIce(env);
@@ -308,7 +320,7 @@ function criarServidor(opcoes) {
       try {
         fn.apply(null, args);
       } catch (e) {
-        console.error('Erro no evento "' + nome + '":', e);
+        log.erro('erro_evento', e, { nome });
         const ack = args[args.length - 1];
         if (typeof ack === 'function') ack({ ok: false, erro: 'Algo deu errado. Tente de novo.' });
       }
@@ -358,6 +370,7 @@ function criarServidor(opcoes) {
       responder(ack, { ok: true, codigo: r.sala.codigo });
       entrarNoCanal(r.sala, String(dados.token));
       atualizarSelo(r.sala.codigo, String(dados.token), true);
+      log.info('sala_criada', { salas: salas.total() });
     });
 
     socket.on('entrar', (dados, ack) => {
@@ -379,7 +392,9 @@ function criarServidor(opcoes) {
       if (typeof _dados === 'function') ack = _dados;
       const r = salas.iniciar(socket.data.codigo, socket.data.token);
       responder(ack, r.ok ? { ok: true } : r);
-      if (r.ok) transmitir(r.sala);
+      if (!r.ok) return;
+      transmitir(r.sala);
+      log.info('partida_iniciada', { jogadores: r.sala.jogadores.filter((j) => j.online).length });
     });
 
     socket.on('acao', (dados, ack) => {
@@ -421,7 +436,7 @@ function criarServidor(opcoes) {
       armazem.perfil(dados.token).then(
         (perfil) => responder(ack, { ok: true, perfil }),
         (e) => {
-          console.error('Erro ao ler o perfil:', e.message);
+          log.erro('erro_ler_perfil', e);
           responder(ack, { ok: false, erro: 'Não deu para carregar o histórico agora.' });
         });
     });
@@ -439,7 +454,7 @@ function criarServidor(opcoes) {
           if (!r.erro && socket.data.codigo && socket.data.token === dados.token) atualizarSelo(socket.data.codigo, dados.token, true);
         },
         (e) => {
-          console.error('Erro ao escolher item visual:', e.message);
+          log.erro('erro_escolher_visual', e);
           responder(ack, { ok: false, erro: 'Não deu para salvar agora.' });
         });
     });
@@ -471,7 +486,53 @@ function criarServidor(opcoes) {
     return Promise.all([...gravacoes]);
   }
 
-  return { servidorHttp, io, salas, aguardarGravacoes };
+  /**
+   * Manda a todos os aparelhos o aviso de que a sala vai fechar. Não conta com todos recebendo:
+   * espera no máximo `esperaAviso` pelas confirmações e segue. Quem não recebeu vê "Reconectando…"
+   * e depois o aviso de sala encerrada, como antes.
+   */
+  function avisarReinicio() {
+    const aparelhos = io.sockets.sockets.size;
+    const inicio = Date.now();
+    if (!aparelhos) return Promise.resolve({ aparelhos: 0, confirmaram: 0, ms: 0 });
+    return new Promise((pronto) => {
+      const fim = (confirmaram) => pronto({ aparelhos, confirmaram, ms: Date.now() - inicio });
+      setTimeout(() => fim(0), esperaAviso + 200).unref(); // se o Socket.io nunca responder
+      try {
+        io.timeout(esperaAviso).emit('servidor:reiniciando', (_erro, respostas) => fim((respostas || []).length));
+      } catch (e) {
+        log.erro('erro_aviso_reinicio', e);
+        fim(0);
+      }
+    });
+  }
+
+  /**
+   * Desligamento pedido pela hospedagem (SIGTERM, antes de trocar de versão): avisa os aparelhos,
+   * fecha as conexões e termina de gravar as partidas que já acabaram. As partidas em andamento
+   * seguem como antes do aviso: não são gravadas. Chamar de novo devolve o mesmo desligamento.
+   */
+  let encerramento = null;
+  function encerrar(sinal) {
+    if (encerramento) return encerramento;
+    const inicio = Date.now();
+    log.info('encerramento_recebido', Object.assign({ sinal }, salas.contagem()));
+    encerramento = (async () => {
+      log.info('aviso_reinicio', await avisarReinicio());
+      io.close();
+      servidorHttp.close();
+      await aguardarGravacoes();
+      try {
+        if (armazem && armazem.fechar) await armazem.fechar();
+      } catch (e) {
+        log.erro('erro_fechar_banco', e);
+      }
+      log.info('encerramento_concluido', { ms: Date.now() - inicio });
+    })();
+    return encerramento;
+  }
+
+  return { servidorHttp, io, salas, aguardarGravacoes, encerrar };
 }
 
 module.exports = { criarServidor, servidoresIce, sinalValido, arquivoPublico, origemPermitida, LIMITES };
@@ -481,19 +542,16 @@ if (require.main === module) {
   const porta = Number(process.env.PORT) || 3000;
   // Com DATABASE_URL a progressão fica no Postgres; sem ela, o jogo roda como antes, sem histórico.
   const armazem = process.env.DATABASE_URL ? require('./progressao/Banco.js').criar(process.env.DATABASE_URL) : null;
-  if (!armazem) console.log('Sem DATABASE_URL: as partidas não serão gravadas.');
-  const { servidorHttp, io, aguardarGravacoes } = criarServidor({ armazem });
+  const { servidorHttp, encerrar } = criarServidor({ armazem });
   servidorHttp.listen(porta, () => {
-    console.log('Tá Ligado? ouvindo na porta ' + porta + (process.env.PORT ? '' : ' (http://localhost:' + porta + ')'));
+    // Sem DATABASE_URL, progressao: false (as partidas não são gravadas).
+    Log.padrao.info('servidor_iniciado', { porta, progressao: !!armazem });
+    if (!process.env.PORT) console.log('Abra http://localhost:' + porta);
   });
-  // A hospedagem manda SIGTERM antes de trocar de versão: fecha as conexões e termina de gravar
-  // as partidas em andamento, sem travar.
+  // O Render manda SIGTERM antes de trocar de versão e espera 30 s até forçar. Aqui o limite é
+  // 5 s, para nunca travar o desligamento.
   process.on('SIGTERM', () => {
-    io.close();
-    servidorHttp.close();
-    aguardarGravacoes()
-      .then(() => armazem && armazem.fechar())
-      .finally(() => process.exit(0));
     setTimeout(() => process.exit(0), 5000).unref();
+    encerrar('SIGTERM').finally(() => process.exit(0));
   });
 }

@@ -20,6 +20,7 @@ var UI = (function () {
 
   var COLUNAS = Game.COLUNAS;
   var LINHAS = Game.LINHAS;
+  var AVISO_REINICIO = 'O jogo está sendo atualizado. Esta sala vai fechar em instantes.';
 
   var MOLDE = [
     '<header class="topo">',
@@ -318,7 +319,8 @@ var UI = (function () {
             (j.id === sala.anfitriaoId ? ' <span aria-label="anfitrião">👑</span>' : '') +
             (opcoes.social ? opcoes.social.iconeVoz(j) : '') + '</li>';
         }).join('') + '</ul>' +
-        (jogo.conectado() ? '' : '<span class="chip chip-alerta">Reconectando…</span>') +
+        (jogo.reiniciando() ? '<span class="chip chip-alerta chip-longo" role="status">' + AVISO_REINICIO + '</span>' :
+          jogo.conectado() ? '' : '<span class="chip chip-alerta">Reconectando…</span>') +
         (opcoes.social ? opcoes.social.slot() : '') +
         '<button class="botao botao-fantasma botao-pequeno" data-acao="sair-sala">Sair</button>';
       if (barraAtual !== html) { barraAtual = html; el.barra.innerHTML = html; }
