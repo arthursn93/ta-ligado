@@ -5,11 +5,13 @@
 'use strict';
 
 const Perfil = require('./Perfil.js');
+const Regras = require('./regras.js');
 
 function criar() {
   const partidas = new Set();
   const linhas = []; // da mais antiga para a mais recente
   const nomes = new Map(); // tokenHash -> último nome
+  const xps = new Map(); // tokenHash -> XP total
 
   return {
     pronto: () => Promise.resolve(),
@@ -17,16 +19,22 @@ function criar() {
       if (!Perfil.valeGravar(resumo)) return { gravada: false };
       if (partidas.has(resumo.id)) return { gravada: false, jaExistia: true };
       partidas.add(resumo.id);
-      for (const l of Perfil.linhasDoResumo(resumo)) {
+      const desde = resumo.encerradaEm - Regras.LIMITE_DIARIO.janelaMs;
+      const jogadores = [];
+      for (const bruta of Perfil.linhasDoResumo(resumo)) {
+        const recentes = linhas.filter((l) => l.tokenHash === bruta.tokenHash && l.valida && l.encerradaEm > desde).length;
+        const l = Perfil.comXp(resumo, bruta, recentes);
         linhas.push(l);
         nomes.set(l.tokenHash, l.nome);
+        xps.set(l.tokenHash, (xps.get(l.tokenHash) || 0) + l.xpGanho);
+        jogadores.push(Perfil.resultadoXp(l, xps.get(l.tokenHash)));
       }
-      return { gravada: true };
+      return { gravada: true, jogadores };
     },
     async perfil(token) {
       const h = Perfil.hashToken(token);
       const minhas = linhas.filter((l) => l.tokenHash === h).reverse().sort((a, b) => b.encerradaEm - a.encerradaEm);
-      return Perfil.montar(nomes.get(h), minhas);
+      return Perfil.montar(nomes.get(h), minhas, xps.get(h));
     },
     fechar: () => Promise.resolve()
   };

@@ -6,6 +6,7 @@
 
 const crypto = require('crypto');
 const { precisao } = require('./Partida.js');
+const Regras = require('./regras.js');
 
 const TAMANHO_HISTORICO = 20;
 
@@ -39,6 +40,30 @@ function linhasDoResumo(resumo) {
   }));
 }
 
+/**
+ * Aplica as regras de XP a uma linha (o mesmo cálculo no banco e na memória).
+ * `validasRecentes` = partidas válidas do jogador nas últimas 24 horas antes desta.
+ */
+function comXp(resumo, linha, validasRecentes) {
+  const r = Regras.xpDaPartida(resumo, linha, validasRecentes);
+  return Object.assign({}, linha, { valida: r.valida, xpGanho: r.total, xpDetalhe: r.detalhe, limitado: !!r.limitado });
+}
+
+/** O que a partida rendeu para um jogador, para mostrar no placar final. */
+function resultadoXp(linha, xpTotal) {
+  const antes = Regras.nivel(xpTotal - linha.xpGanho);
+  const depois = Regras.nivel(xpTotal);
+  return {
+    tokenHash: linha.tokenHash,
+    valida: linha.valida,
+    limitado: linha.limitado,
+    xpGanho: linha.xpGanho,
+    detalhe: linha.xpDetalhe,
+    nivel: depois,
+    subiuDeNivel: depois.nivel > antes.nivel
+  };
+}
+
 /** Só vale gravar partida em que pelo menos uma carta foi jogada. */
 function valeGravar(resumo) {
   return resumo.tentativas > 0 && resumo.jogadores.length > 0;
@@ -48,7 +73,7 @@ function valeGravar(resumo) {
  * Monta o perfil. `linhas` vêm da mais recente para a mais antiga.
  * Recordes contam só partidas concluídas em que a pessoa estava no fim.
  */
-function montar(nome, linhas) {
+function montar(nome, linhas, xp) {
   const t = { cartas: 0, acertosTurma: 0, errosTurma: 0, pistasDadas: 0, pistasCertas: 0, palpites: 0, palpitesCertos: 0 };
   const partidas = { concluidas: 0, saiuAntes: 0, interrompidas: 0 };
   let melhorPontuacao = null;
@@ -71,6 +96,7 @@ function montar(nome, linhas) {
   }
   return {
     nome: nome || null,
+    nivel: Regras.nivel(xp || 0),
     partidas,
     cartas: t.cartas,
     acertosTurma: t.acertosTurma,
@@ -92,9 +118,10 @@ function montar(nome, linhas) {
       erros: l.erros,
       jogadores: l.jogadores,
       pistasDadas: l.pistasDadas,
-      pistasCertas: l.pistasCertas
+      pistasCertas: l.pistasCertas,
+      xpGanho: l.xpGanho || 0
     }))
   };
 }
 
-module.exports = { hashToken, linhasDoResumo, valeGravar, montar, TAMANHO_HISTORICO };
+module.exports = { hashToken, linhasDoResumo, comXp, resultadoXp, valeGravar, montar, TAMANHO_HISTORICO };
