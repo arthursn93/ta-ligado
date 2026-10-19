@@ -11,3 +11,6 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "22"
+      # Endereço do PostgreSQL da progressão (ex.: do Neon). O valor é preenchido no painel, nunca aqui.
+      - key: DATABASE_URL
+        sync: false
