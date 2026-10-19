@@ -48,6 +48,11 @@ Bom saber sobre o plano gratuito:
 
 - O serviço dorme depois de um tempo sem visitas. O primeiro acesso depois disso demora cerca de um minuto para acordar.
 - As salas ficam na memória do servidor. Se ele dormir, reiniciar ou receber uma versão nova, as salas abertas somem: o jogo volta sozinho para a tela inicial com o aviso "A sala foi encerrada" e a turma cria outra.
+- Quando o Render vai desligar a versão antiga (sinal `SIGTERM`), o servidor avisa na hora os aparelhos conectados: "O jogo está sendo atualizado. Esta sala vai fechar em instantes." Espera no máximo 1 segundo pelas confirmações e desliga; quem não recebeu vê "Reconectando…", como antes. Partidas em andamento não são gravadas, e as que já terminaram acabam de ser gravadas antes de desligar.
+
+### Logs
+
+O servidor escreve uma linha JSON por acontecimento importante, para ler em **Logs** no Render (dá para buscar pelo nome do evento): `servidor_iniciado`, `sala_criada`, `partida_iniciada`, `partida_encerrada`, `encerramento_recebido` (com quantas salas, jogadores conectados e partidas em andamento havia), `aviso_reinicio` (quantos aparelhos confirmaram), `encerramento_concluido` e os erros (`erro_…`, com `"nivel":"erro"`). Os logs nunca levam nomes, códigos de sala, tokens ou IPs, e endereços com senha são trocados por `[endereço]` (`server/log.js`).
 - Enquanto o servidor acorda, a tela mostra "Conectando ao servidor…". Se depois de 1 minuto não der, aparece a opção de tentar de novo ou jogar num aparelho só.
 
 ### Proteções do servidor
@@ -127,6 +132,7 @@ Abra o `index.html` direto no navegador (dois cliques, sem servidor) e o aparelh
 | `js/Rede.js` | Cliente Socket.io com a mesma interface do `Game` (`visao`, `executar`, `assinar`). |
 | `server/index.js` | Servidor HTTP + Socket.io. Serve só os arquivos do jogo, com limites contra abuso. |
 | `server/Salas.js` | Salas por código, anfitrião, rodízio do dador, permissões e reconexão. |
+| `server/log.js` | Logs em JSON, uma linha por evento, sem dados pessoais. |
 | `server/progressao/Partida.js` | Estatísticas de cada partida online (acertos, erros, sequência, pistas de cada dador), contadas no servidor. |
 | `server/progressao/Banco.js` | Grava as partidas no PostgreSQL e lê o perfil de cada aparelho. Aplica as migrações de `server/progressao/migracoes/` na subida. |
 | `server/progressao/Memoria.js` | O mesmo que o `Banco.js`, só em memória (testes e jogo em casa). |

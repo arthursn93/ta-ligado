@@ -13,6 +13,7 @@ const crypto = require('crypto');
 const Game = require('../js/Game.js');
 const Partida = require('./progressao/Partida.js');
 const { hashToken } = require('./progressao/Perfil.js');
+const Log = require('./log.js');
 
 const LETRAS_CODIGO = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // sem I e O, que confundem com 1 e 0
 const MAX_JOGADORES = 10;
@@ -30,6 +31,7 @@ function criarGerenciador(opcoes) {
   const aoEncerrarPartida = opcoes.aoEncerrarPartida || (() => {});
   // Com progressão ligada, a tela do placar final espera o XP de cada um.
   const progressaoAtiva = !!opcoes.progressaoAtiva;
+  const log = opcoes.log || Log.padrao;
   const salas = new Map(); // codigo -> sala
 
   function novoCodigo() {
@@ -144,7 +146,7 @@ function criarGerenciador(opcoes) {
       aoEncerrarPartida(resumo);
     } catch (e) {
       // A contagem nunca pode travar a sala.
-      console.error('Erro ao encerrar a partida:', e);
+      log.erro('erro_encerrar_partida', e);
     }
     return resumo;
   }
@@ -358,7 +360,16 @@ function criarGerenciador(opcoes) {
     registrarProgresso,
     historicoChat: (codigo) => (salas.get(codigo) ? salas.get(codigo).chat.slice() : []),
     obter: (codigo) => salas.get(codigo),
-    total: () => salas.size
+    total: () => salas.size,
+    /** Só números, para o log: salas abertas, jogadores conectados e partidas em andamento. */
+    contagem: () => {
+      let jogadores = 0, partidas = 0;
+      for (const sala of salas.values()) {
+        jogadores += sala.jogadores.filter((j) => j.online).length;
+        if (sala.partida) partidas++;
+      }
+      return { salas: salas.size, jogadores, partidas };
+    }
   };
 }
 

@@ -54,6 +54,7 @@ var Lobby = (function () {
   var MOLDE_SALA = [
     '<div class="lobby">',
     '  <h1 class="marca">Tá <span>Ligado?</span></h1>',
+    '  <p class="lobby-aviso" data-lobby="reinicio" role="status" hidden>O jogo está sendo atualizado. Esta sala vai fechar em instantes.</p>',
     '  <section class="cartao-modal lobby-cartao">',
     '    <p class="rotulo">Código da sala</p>',
     '    <div class="codigo-sala" aria-live="polite"></div>',
@@ -105,6 +106,7 @@ var Lobby = (function () {
     }
 
     function renderSala(sala) {
+      raiz.querySelector('[data-lobby="reinicio"]').hidden = !rede.reiniciando();
       raiz.querySelector('.codigo-sala').innerHTML = sala.codigo.split('').map(function (l) {
         return '<span>' + l + '</span>';
       }).join('');

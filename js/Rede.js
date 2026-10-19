@@ -36,6 +36,7 @@ var Rede = (function () {
     var codigo = null;
     var conectado = false;
     var salaEncerrada = false; // a sala salva não existe mais (ex.: o servidor reiniciou)
+    var reiniciando = false; // o servidor avisou que vai reiniciar e a sala vai fechar
     var assinantes = [];
     var aoEntrarFns = [];
 
@@ -69,8 +70,16 @@ var Rede = (function () {
       avisar();
     });
 
+    // Aviso mandado pelo servidor antes de desligar. Pode não chegar: aí vale o "Reconectando…".
+    socket.on('servidor:reiniciando', function (confirmar) {
+      reiniciando = true;
+      avisar();
+      if (typeof confirmar === 'function') confirmar();
+    });
+
     socket.on('connect', function () {
       conectado = true;
+      reiniciando = false;
       // Conexão voltou (ou página recarregada): retoma o lugar na sala com o mesmo token.
       var salva = codigo || ler(CHAVE_SALA);
       if (salva) {
@@ -105,6 +114,7 @@ var Rede = (function () {
       sala: function () { return estado && estado.sala; },
       conectado: function () { return conectado; },
       salaEncerrada: function () { return salaEncerrada; },
+      reiniciando: function () { return reiniciando; },
       temSalaSalva: function () { return !!(codigo || ler(CHAVE_SALA)); },
       nomeSalvo: function () { return ler(CHAVE_NOME) || ''; },
       souDador: function () { var s = estado && estado.sala; return !!s && s.dadorId === s.euId; },
