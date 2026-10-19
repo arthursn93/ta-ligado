@@ -67,7 +67,7 @@ O servidor escreve uma linha JSON por acontecimento, para ler em **Logs** no Ren
 
 O que nunca entra nos logs: nomes de jogadores, códigos de sala, mensagens do chat, tokens, IPs, senhas e endereços com credenciais. Nas mensagens de erro, endereços (como uma URL de banco) viram `[endereço]` e IPs viram `[ip]`. Os bloqueios são somados por minuto para um ataque não encher os logs; o Render descarta o que passar de 6.000 linhas por minuto ([documentação](https://render.com/docs/logging)).
 
-Por quanto tempo o Render guarda os logs depende do plano do **workspace**, não do serviço: 7 dias no Hobby, 14 no Pro e 30 no Scale/Enterprise, segundo a [documentação do Render](https://render.com/docs/logging) (consultada em outubro de 2026). Qual desses vale aqui depende do plano do workspace no painel do Render, que não foi confirmado neste repositório. Logs mais antigos que isso não ficam disponíveis.
+Por quanto tempo o Render guarda os logs depende do plano do **workspace**, não do serviço: 7 dias no Hobby, 14 no Pro e 30 no Scale/Enterprise, segundo a [documentação do Render](https://render.com/docs/logging) (consultada em outubro de 2026). Este projeto usa a instância **Free**, num workspace **Hobby** (o único plano de workspace de $0, segundo os [preços do Render](https://render.com/pricing)): os logs ficam **7 dias**. Se o workspace mudar de plano, o prazo muda junto. Logs mais antigos que isso não ficam disponíveis.
 
 ### Proteções do servidor
 
