@@ -86,6 +86,12 @@ O servidor calcula o XP de cada pessoa quando a partida termina; o aparelho só 
 - Depois de 10 partidas válidas em 24 horas, as seguintes rendem só os 30 da participação.
 - XP para chegar ao nível n = 50 × n × (n − 1): nível 2 com 100, 3 com 300, 4 com 600, 5 com 1.000, 10 com 4.500.
 
+### Conquistas e recompensas
+
+As conquistas (14, em `server/progressao/catalogo.js`) desbloqueiam uma vez só, rendem 15 XP cada e só contam em partida válida. Exemplos: Primeira ligação (uma pista sua levou a acerto), Sintonia (turma com 80% ou mais), Mão certeira (todas as suas pistas da partida acertadas, pelo menos 3), Tabuleiro perfeito (25 acertos sem erro).
+
+As recompensas são só visuais: títulos, molduras do nome e cores do tabuleiro, liberados por nível ou por conquista. Nenhuma muda pista, tempo ou o que cada um vê do tabuleiro. Quem escolhe um item é o aparelho, mas o servidor confere se ele está liberado antes de salvar.
+
 ### Num aparelho só
 
 Abra o `index.html` direto no navegador (dois cliques, sem servidor) e o aparelho vai passando de mão em mão. Com o servidor rodando, essa opção também aparece na tela inicial: **Jogar num aparelho só**.
@@ -107,6 +113,7 @@ Abra o `index.html` direto no navegador (dois cliques, sem servidor) e o aparelh
 | `server/progressao/Partida.js` | Estatísticas de cada partida online (acertos, erros, sequência, pistas de cada dador), contadas no servidor. |
 | `server/progressao/Banco.js` | Grava as partidas no PostgreSQL e lê o perfil de cada aparelho. Aplica as migrações de `server/progressao/migracoes/` na subida. |
 | `server/progressao/Memoria.js` | O mesmo que o `Banco.js`, só em memória (testes e jogo em casa). |
+| `server/progressao/catalogo.js` | Catálogo de conquistas e recompensas visuais, com os critérios de cada uma. |
 | `server/progressao/regras.js` | Regras de XP e níveis: todos os números de balanceamento ficam aqui. |
 | `server/progressao/Perfil.js` | Monta estatísticas gerais, recordes e histórico a partir das partidas gravadas. |
 | `js/Theme.js` | Skins de cor. |

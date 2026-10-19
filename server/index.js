@@ -12,6 +12,7 @@
  *   'voz:estado' {estado}            -> {ok}   estado: null | 'ouvindo' | 'mudo' | 'ligado'
  *   'voz:sinal'  {para, dados}       (oferta/resposta/candidato WebRTC para outro jogador da sala)
  *   'perfil'  {token}                -> {ok, perfil} | {ok:false, erro}   estatísticas e histórico do aparelho
+ *   'perfil:visual' {token, tipo, id} -> {ok, perfil} | {ok:false, erro}  escolhe um item visual já liberado
  * Eventos do servidor:
  *   'estado'        visão da sala e da partida do ponto de vista de cada jogador.
  *   'chat'          uma mensagem nova da sala.
@@ -392,6 +393,21 @@ function criarServidor(opcoes) {
         (e) => {
           console.error('Erro ao ler o perfil:', e.message);
           responder(ack, { ok: false, erro: 'Não deu para carregar o histórico agora.' });
+        });
+    });
+
+    socket.on('perfil:visual', (dados, ack) => {
+      dados = dados || {};
+      if (!armazem) return responder(ack, { ok: false, erro: 'O perfil não está disponível neste servidor.' });
+      if (!tokenValido(dados.token)) return responder(ack, { ok: false, erro: 'Aparelho sem identificação. Recarregue a página.' });
+      if (typeof dados.tipo !== 'string' || typeof dados.id !== 'string') return responder(ack, { ok: false, erro: 'Item inválido.' });
+      if (limitePerfil.estourou(ip)) return responder(ack, { ok: false, erro: 'Muitos pedidos. Espere um minuto.' });
+      limitePerfil.contar(ip);
+      armazem.escolherVisual(dados.token, dados.tipo, dados.id).then(
+        (r) => responder(ack, r.erro ? { ok: false, erro: r.erro } : { ok: true, perfil: r.perfil }),
+        (e) => {
+          console.error('Erro ao escolher item visual:', e.message);
+          responder(ack, { ok: false, erro: 'Não deu para salvar agora.' });
         });
     });
 

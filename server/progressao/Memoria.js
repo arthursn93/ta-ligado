@@ -12,6 +12,8 @@ function criar() {
   const linhas = []; // da mais antiga para a mais recente
   const nomes = new Map(); // tokenHash -> último nome
   const xps = new Map(); // tokenHash -> XP total
+  const conquistas = new Map(); // tokenHash -> [{id, em}]
+  const visuais = new Map(); // tokenHash -> {tipo: id}
 
   return {
     pronto: () => Promise.resolve(),
@@ -22,19 +24,33 @@ function criar() {
       const desde = resumo.encerradaEm - Regras.LIMITE_DIARIO.janelaMs;
       const jogadores = [];
       for (const bruta of Perfil.linhasDoResumo(resumo)) {
-        const recentes = linhas.filter((l) => l.tokenHash === bruta.tokenHash && l.valida && l.encerradaEm > desde).length;
-        const l = Perfil.comXp(resumo, bruta, recentes);
+        const h = bruta.tokenHash;
+        const anteriores = linhas.filter((l) => l.tokenHash === h);
+        const recentes = anteriores.filter((l) => l.valida && l.encerradaEm > desde).length;
+        const minhas = conquistas.get(h) || [];
+        const r = Perfil.comConquistas(resumo, Perfil.comXp(resumo, bruta, recentes), anteriores, xps.get(h) || 0,
+          new Set(minhas.map((c) => c.id)));
+        const l = r.linha;
         linhas.push(l);
-        nomes.set(l.tokenHash, l.nome);
-        xps.set(l.tokenHash, (xps.get(l.tokenHash) || 0) + l.xpGanho);
-        jogadores.push(Perfil.resultadoXp(l, xps.get(l.tokenHash)));
+        nomes.set(h, l.nome);
+        xps.set(h, (xps.get(h) || 0) + l.xpGanho);
+        conquistas.set(h, minhas.concat(r.novas.map((id) => ({ id, em: resumo.encerradaEm }))));
+        jogadores.push(Perfil.resultadoXp(l, xps.get(h), r.novas));
       }
       return { gravada: true, jogadores };
     },
     async perfil(token) {
       const h = Perfil.hashToken(token);
       const minhas = linhas.filter((l) => l.tokenHash === h).reverse().sort((a, b) => b.encerradaEm - a.encerradaEm);
-      return Perfil.montar(nomes.get(h), minhas, xps.get(h));
+      return Perfil.montar(nomes.get(h), minhas, xps.get(h), conquistas.get(h), visuais.get(h));
+    },
+    async escolherVisual(token, tipo, id) {
+      const h = Perfil.hashToken(token);
+      if (!nomes.has(h)) return { erro: 'Jogue uma partida para liberar itens.' };
+      const r = Perfil.escolher(visuais.get(h), tipo, id, xps.get(h) || 0, conquistas.get(h) || []);
+      if (r.erro) return r;
+      visuais.set(h, r.escolhido);
+      return { perfil: await this.perfil(token) };
     },
     fechar: () => Promise.resolve()
   };
