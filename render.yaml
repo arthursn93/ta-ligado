@@ -7,7 +7,8 @@ services:
     buildCommand: npm install
     startCommand: npm start
     healthCheckPath: /saude
-    autoDeploy: true
+    # Só publica depois que o check "testes" (GitHub Actions) passar no commit do main.
+    autoDeployTrigger: checksPass
     envVars:
       - key: NODE_VERSION
         value: "22"
