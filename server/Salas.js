@@ -11,6 +11,7 @@
 
 const crypto = require('crypto');
 const Game = require('../js/Game.js');
+const Partida = require('./progressao/Partida.js');
 
 const LETRAS_CODIGO = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // sem I e O, que confundem com 1 e 0
 const MAX_JOGADORES = 10;
@@ -24,6 +25,8 @@ const ESTADOS_VOZ = ['ouvindo', 'mudo', 'ligado']; // null = fora da voz
 function criarGerenciador(opcoes) {
   opcoes = opcoes || {};
   const criarJogo = opcoes.criarJogo || (() => Game.criar());
+  // Chamado com o resumo de cada partida que termina (concluída ou interrompida).
+  const aoEncerrarPartida = opcoes.aoEncerrarPartida || (() => {});
   const salas = new Map(); // codigo -> sala
 
   function novoCodigo() {
@@ -60,7 +63,7 @@ function criarGerenciador(opcoes) {
     if (!nome) return erro('Digite seu nome.');
     const sala = {
       codigo: novoCodigo(), jogadores: [], anfitriaoId: null, jogo: null, dadorId: null, rodadaDoDador: 0,
-      chat: [], seqMensagem: 0
+      chat: [], seqMensagem: 0, partida: null, ultimaPartida: null
     };
     const jogador = novoJogador(sala, token, nome);
     sala.anfitriaoId = jogador.id;
@@ -109,6 +112,7 @@ function criarGerenciador(opcoes) {
     if (!sala) return null;
     sala.jogadores = sala.jogadores.filter((j) => j.token !== token);
     if (sala.jogadores.length === 0) {
+      fecharPartida(sala, Partida.ESTADO.INTERROMPIDA);
       salas.delete(codigo);
       return null;
     }
@@ -119,7 +123,27 @@ function criarGerenciador(opcoes) {
 
   function removerSeVazia(codigo) {
     const sala = salas.get(codigo);
-    if (sala && sala.jogadores.every((j) => !j.online)) salas.delete(codigo);
+    if (sala && sala.jogadores.every((j) => !j.online)) {
+      fecharPartida(sala, Partida.ESTADO.INTERROMPIDA);
+      salas.delete(codigo);
+    }
+  }
+
+  /** Fecha o registro da partida em andamento (se houver) e entrega o resumo. */
+  function fecharPartida(sala, estado) {
+    if (!sala.partida) return null;
+    const online = sala.jogadores.filter((j) => j.online).map((j) => j.token);
+    const resumo = Partida.encerrar(sala.partida, estado, online, sala.jogo.visao().totalCartas);
+    sala.partida = null;
+    if (!resumo) return null;
+    sala.ultimaPartida = resumo;
+    try {
+      aoEncerrarPartida(resumo);
+    } catch (e) {
+      // A contagem nunca pode travar a sala.
+      console.error('Erro ao encerrar a partida:', e);
+    }
+    return resumo;
   }
 
   function garantirAnfitriao(sala) {
@@ -165,8 +189,11 @@ function criarGerenciador(opcoes) {
     if (!sala.jogo) {
       sala.jogo = criarJogo();
     } else {
+      // Recomeçar no meio deixa a partida anterior como interrompida.
+      fecharPartida(sala, Partida.ESTADO.INTERROMPIDA);
       sala.jogo.executar({ tipo: 'NOVA_PARTIDA' });
     }
+    sala.partida = Partida.iniciar(sala.codigo);
     sala.rodadaDoDador = 0; // força a troca: a vez segue para o próximo da roda
     garantirDador(sala);
     return { ok: true, sala };
@@ -186,9 +213,26 @@ function criarGerenciador(opcoes) {
     if (tipo === 'NOVA_PARTIDA') return iniciar(codigo, token);
     if (tipo !== 'DAR_PISTA' && tipo !== 'CHUTAR') return erro('Ação desconhecida.');
 
+    const dador = sala.jogadores.find((j) => j.id === sala.dadorId);
     const resultado = sala.jogo.executar(acao);
+    if (resultado.ok && tipo === 'CHUTAR') contarCarta(sala, dador, jogador);
     if (resultado.ok) garantirDador(sala);
     return Object.assign({ sala }, resultado);
+  }
+
+  /** Registra a carta que o Game acabou de resolver e fecha a partida se as cartas acabaram. */
+  function contarCarta(sala, dador, chutador) {
+    if (!sala.partida) return;
+    const v = sala.jogo.visao();
+    const quem = (j) => (j ? { token: j.token, nome: j.nome } : null);
+    Partida.registrarCarta(sala.partida, {
+      rodada: v.ultimaJogada.rodada,
+      acertou: v.ultimaJogada.acertou,
+      dador: quem(dador),
+      chutador: quem(chutador),
+      presentes: sala.jogadores.filter((j) => j.online).map(quem)
+    });
+    if (v.fase === Game.FASE.FIM) fecharPartida(sala, Partida.ESTADO.CONCLUIDA);
   }
 
   /**
