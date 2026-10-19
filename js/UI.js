@@ -33,7 +33,7 @@ var UI = (function () {
     '</header>',
     '<section class="barra-sala" hidden></section>',
     '<section class="faixa-pista" aria-live="polite"></section>',
-    '<section class="tabuleiro"><div class="grade" role="grid" aria-label="Tabuleiro 5 por 5"></div></section>',
+    '<section class="tabuleiro"><div class="grade" role="group" aria-label="Tabuleiro 5 por 5"></div></section>',
     '<section class="painel" aria-live="polite"></section>',
     '<div class="sobreposicao" hidden><div class="cartao-modal" role="dialog" aria-modal="true"></div></div>'
   ].join('');
@@ -122,7 +122,6 @@ var UI = (function () {
           botao.type = 'button';
           botao.className = 'celula';
           botao.setAttribute('data-coord', coord);
-          botao.setAttribute('role', 'gridcell');
           celulas[coord] = botao;
           el.grade.appendChild(botao);
         });
@@ -275,7 +274,11 @@ var UI = (function () {
     /** Chegou estado novo do servidor: decide a etapa da tela deste aparelho. */
     function aoMudarOnline() {
       var v = jogo.visao();
-      if (!v) return;
+      if (!v) {
+        // A sala sumiu do servidor: não deixa o tabuleiro congelado na tela.
+        if (!jogo.sala() && opcoes.aoSalaEncerrada) opcoes.aoSalaEncerrada();
+        return;
+      }
       var jogadas = v.historico.length;
       if (jogadasVistas >= 0 && jogadas < jogadasVistas) {
         // O anfitrião começou outra partida.

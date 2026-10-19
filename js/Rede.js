@@ -35,6 +35,7 @@ var Rede = (function () {
     var estado = null; // { sala, jogo } vindo do servidor
     var codigo = null;
     var conectado = false;
+    var salaEncerrada = false; // a sala salva não existe mais (ex.: o servidor reiniciou)
     var assinantes = [];
     var aoEntrarFns = [];
 
@@ -57,6 +58,7 @@ var Rede = (function () {
 
     function lembrarSala(novoCodigo, nome) {
       codigo = novoCodigo;
+      salaEncerrada = false;
       gravar(CHAVE_SALA, novoCodigo);
       if (nome) gravar(CHAVE_NOME, nome);
       entrou();
@@ -74,7 +76,8 @@ var Rede = (function () {
       if (salva) {
         pedir('entrar', { codigo: salva, token: token }).then(function (r) {
           if (r.ok) { codigo = r.codigo; entrou(); return; }
-          // A sala acabou enquanto estávamos fora.
+          // A sala acabou enquanto estávamos fora (ou o servidor reiniciou e esqueceu as salas).
+          salaEncerrada = true;
           codigo = null;
           estado = null;
           gravar(CHAVE_SALA, null);
@@ -101,6 +104,7 @@ var Rede = (function () {
       // Sala
       sala: function () { return estado && estado.sala; },
       conectado: function () { return conectado; },
+      salaEncerrada: function () { return salaEncerrada; },
       temSalaSalva: function () { return !!(codigo || ler(CHAVE_SALA)); },
       nomeSalvo: function () { return ler(CHAVE_NOME) || ''; },
       souDador: function () { var s = estado && estado.sala; return !!s && s.dadorId === s.euId; },

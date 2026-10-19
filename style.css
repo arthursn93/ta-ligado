@@ -24,8 +24,8 @@
 :root,
 [data-skin="padrao"] {
   --papel: #fff6e3;          /* marfim das cartas */
-  --moldura: #e4572e;        /* tomate: bordas e botões */
-  --moldura-escura: #b23c1c;
+  --moldura: #c2401c;        /* tomate: bordas e botões (escuro o bastante para ler texto nele) */
+  --moldura-escura: #8a2d12;
   --palavra: #f2b134;        /* mostarda: cartas de palavra */
   --dica: #2f5d9e;           /* azul-cobalto: cartas de dica */
   --dica-escura: #1f4073;
@@ -41,8 +41,8 @@
 }
 
 [data-skin="oceano"] {
-  --moldura: #2a9d8f;
-  --moldura-escura: #1d6f65;
+  --moldura: #1d7468;
+  --moldura-escura: #12483f;
   --palavra: #f4a261;
   --dica: #264653;
   --dica-escura: #172b33;
@@ -610,6 +610,18 @@ button { font: inherit; color: inherit; }
 .lobby .marca { margin: 8px 0 0; }
 .lobby .marca-grande { margin-top: 12px; }
 .lobby-sub { margin: 0; max-width: 360px; text-align: center; font-size: 17px; }
+.lobby-aviso {
+  margin: 0;
+  max-width: 400px;
+  padding: 10px 14px;
+  border: 3px solid var(--moldura);
+  border-radius: 12px;
+  background: var(--papel);
+  font-weight: 800;
+  text-align: center;
+}
+.lobby-aviso[hidden] { display: none; }
+.lobby-rodape { font-size: 14px; color: var(--tinta); }
 .lobby-cartao { text-align: left; }
 .lobby-cartao h2 { font-size: 22px; text-align: left; margin-top: 10px; }
 .lobby-rotulo { display: block; margin: 0 0 6px; font-size: 15px; font-weight: 800; }
