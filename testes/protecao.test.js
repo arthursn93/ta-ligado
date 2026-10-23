@@ -129,6 +129,6 @@ test('prévia do link: 1200×630, menos de 300 KB, e a pista aparece em maiúscu
   assert.equal(png.readUInt32BE(20), 630);
   assert.ok(png.length < 300 * 1024, png.length + ' bytes');
   const css = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
-  assert.match(css, /#campo-pista, \.faixa-palavra, \.celula-pista \{ text-transform: uppercase; \}/);
+  assert.match(css, /#campo-pista, \.faixa-palavra, \.celula-pista, \.cab-palavra \{ text-transform: uppercase; \}/);
   assert.match(fs.readFileSync(path.join(__dirname, '..', 'js', 'UI.js'), 'utf8'), /id="campo-pista"[^>]*autocapitalize="characters"/);
 });

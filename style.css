@@ -1096,7 +1096,13 @@ button { font: inherit; color: inherit; }
   .topo .botao { padding: 6px 10px; font-size: 13px; }
 }
 
-/* A pista aparece em maiúsculas enquanto é digitada, no topo e nas casas do tabuleiro. Só o visual muda:
+/* A pista aparece em maiúsculas enquanto é digitada, no topo, nas casas e nas palavras das colunas e linhas. Só o visual muda:
    o texto enviado é o digitado, e a comparação com a grade já ignora maiúsculas. */
-#campo-pista, .faixa-palavra, .celula-pista { text-transform: uppercase; }
+#campo-pista, .faixa-palavra, .celula-pista, .cab-palavra { text-transform: uppercase; }
 #campo-pista::placeholder { text-transform: none; }
+@media (max-width: 560px) {
+  /* Em maiúsculas a palavra ocupa mais espaço: a letra diminui um pouco e a coluna das linhas alarga. */
+  :root { --cab-largura: 82px; }
+  .cab-coluna .cab-palavra { max-height: 100px; font-size: 12px; letter-spacing: 0; }
+  .cab-linha .cab-palavra { font-size: 9.5px; letter-spacing: 0; }
+}
