@@ -534,9 +534,9 @@ var UI = (function () {
             cartaDica(v.coordenadaSecreta, 'carta-grande') + miniMapa(v, v.coordenadaSecreta) +
           '</div>' +
           '<div class="dador-palavras">' +
-            '<div class="dador-palavra"><small>Coluna ' + v.coordenadaSecreta.charAt(0) + '</small><b>' + esc(p.coluna) + '</b></div>' +
+            '<div class="dador-palavra"><small>Coluna ' + v.coordenadaSecreta.charAt(0) + '</small><b><span class="letreiro">' + esc(p.coluna) + '</span></b></div>' +
             '<i>×</i>' +
-            '<div class="dador-palavra"><small>Linha ' + v.coordenadaSecreta.charAt(1) + '</small><b>' + esc(p.linha) + '</b></div>' +
+            '<div class="dador-palavra"><small>Linha ' + v.coordenadaSecreta.charAt(1) + '</small><b><span class="letreiro">' + esc(p.linha) + '</span></b></div>' +
           '</div>' +
           '<form class="form-pista" autocomplete="off">' +
             '<label for="campo-pista">Uma palavra que ligue as duas</label>' +
@@ -578,7 +578,38 @@ var UI = (function () {
       el.sobreposicao.hidden = false;
       var focar = el.modal.querySelector('input') || el.modal.querySelector('.botao-primario');
       if (focar) focar.focus();
+      letreiros();
     }
+
+    /**
+     * Palavra da coordenada secreta que não cabe no retângulo desliza dentro dele, como um letreiro:
+     * espera 700 ms, vai até o fim da palavra, pausa e volta suavemente. O retângulo não muda de tamanho.
+     * Palavra que cabe fica parada; com "reduzir movimento" ligado, fica o "…" de sempre.
+     */
+    function letreiros() {
+      var parado = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      Array.prototype.forEach.call(el.modal.querySelectorAll('.dador-palavra b'), function (caixa) {
+        var texto = caixa.querySelector('.letreiro');
+        if (!texto) return;
+        if (texto.animacao) texto.animacao.cancel();
+        texto.animacao = null;
+        caixa.classList.remove('is-letreiro');
+        var sobra = caixa.scrollWidth - caixa.clientWidth;
+        if (parado || sobra <= 1 || !texto.animate) return;
+        caixa.classList.add('is-letreiro');
+        var espera = 700, ida = Math.max(1200, sobra * 25), pausa = 900, volta = 600;
+        var total = espera + ida + pausa + volta;
+        var fim = 'translateX(' + (-sobra) + 'px)';
+        texto.animacao = texto.animate([
+          { transform: 'translateX(0)', offset: 0 },
+          { transform: 'translateX(0)', offset: espera / total, easing: 'ease-in-out' },
+          { transform: fim, offset: (espera + ida) / total },
+          { transform: fim, offset: (espera + ida + pausa) / total, easing: 'ease-in-out' },
+          { transform: 'translateX(0)', offset: 1 }
+        ], { duration: total, iterations: Infinity });
+      });
+    }
+    window.addEventListener('resize', function () { if (!el.sobreposicao.hidden) letreiros(); });
 
     /** Chuva de confete nas cores do jogo. Some sozinha e respeita "reduzir movimento". */
     function confete(quantidade) {

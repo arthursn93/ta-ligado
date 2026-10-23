@@ -132,3 +132,21 @@ test('prévia do link: 1200×630, menos de 300 KB, e a pista aparece em maiúscu
   assert.match(css, /#campo-pista, \.faixa-palavra, \.celula-pista, \.cab-palavra,\n\.painel-palavras span, \.dador-palavra b, \.pista-dada \{ text-transform: uppercase; \}/);
   assert.match(fs.readFileSync(path.join(__dirname, '..', 'js', 'UI.js'), 'utf8'), /id="campo-pista"[^>]*autocapitalize="characters"/);
 });
+
+test('coordenada secreta: palavra comprida vira letreiro dentro do retângulo, sem aumentá-lo', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const css = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
+  const ui = fs.readFileSync(path.join(__dirname, '..', 'js', 'UI.js'), 'utf8');
+  // Cada palavra vai num <span class="letreiro"> dentro do retângulo, que continua cortando o que sobra.
+  assert.equal((ui.match(/<b><span class="letreiro">' \+ esc\(p\.(coluna|linha)\) \+ '<\/span><\/b>/g) || []).length, 2);
+  assert.match(css, /\.dador-palavra b \{\n  display: inline-block;\n  max-width: 100%;[\s\S]*?overflow: hidden;/);
+  assert.match(css, /\.dador-palavra b\.is-letreiro \{ text-overflow: clip; text-align: left; \}/);
+  // Só anima o que não cabe, espera 700 ms e respeita "reduzir movimento".
+  assert.match(ui, /var sobra = caixa\.scrollWidth - caixa\.clientWidth;\n\s*if \(parado \|\| sobra <= 1 \|\| !texto\.animate\) return;/);
+  assert.match(ui, /var espera = 700,/);
+  assert.match(ui, /prefers-reduced-motion: reduce\)'\)\.matches;\n\s*Array\.prototype\.forEach\.call\(el\.modal\.querySelectorAll\('\.dador-palavra b'\)/);
+  // As palavras continuam lado a lado; só em telas de até 340px os botões ficam mais juntos.
+  assert.doesNotMatch(css, /\.dador-palavras \{ flex-direction: column/);
+  assert.match(css, /@media \(max-width: 340px\) \{[^}]*\.form-pista \.acoes \{ gap: 6px; \}\n  \.form-pista \.acoes \.botao \{ padding-left: 12px; padding-right: 12px; \}/);
+});

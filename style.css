@@ -1109,8 +1109,13 @@ button { font: inherit; color: inherit; }
   :root { --cab-largura: 82px; }
   .cab-coluna .cab-palavra { max-height: 100px; font-size: 12px; letter-spacing: 0; }
   .cab-linha .cab-palavra { font-size: 9.5px; letter-spacing: 0; }
-  /* Quem dá a pista precisa ver as palavras inteiras: no celular uma fica embaixo da outra,
-     cada uma com a largura toda da janela. */
-  .dador-palavras { flex-direction: column; gap: 6px; }
-  .dador-palavra { width: 100%; }
 }
+@media (max-width: 340px) {
+  /* Telas bem estreitas: os dois botões da janela de quem dá a pista ficam mais juntos para caber. */
+  .form-pista .acoes { gap: 6px; }
+  .form-pista .acoes .botao { padding-left: 12px; padding-right: 12px; }
+}
+
+/* Letreiro: com palavra comprida, o texto desliza dentro do retângulo (o JS mede e anima). */
+.dador-palavra b.is-letreiro { text-overflow: clip; text-align: left; }
+.dador-palavra b.is-letreiro .letreiro { display: inline-block; will-change: transform; }
