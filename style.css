@@ -556,8 +556,7 @@ button { font: inherit; color: inherit; }
   color: var(--tinta-suave);
 }
 .dador-palavra b { font-size: 22px; transform: rotate(-1.5deg); }
-/* Quem dá a pista precisa ver a palavra inteira: se não couber, ela quebra em vez de ganhar "…". */
-.dador-palavra b { white-space: normal; overflow-wrap: anywhere; }
+
 .dador-palavra:last-child b { transform: rotate(1.5deg); }
 
 .form-pista { margin-top: 20px; text-align: left; }
@@ -1110,5 +1109,8 @@ button { font: inherit; color: inherit; }
   :root { --cab-largura: 82px; }
   .cab-coluna .cab-palavra { max-height: 100px; font-size: 12px; letter-spacing: 0; }
   .cab-linha .cab-palavra { font-size: 9.5px; letter-spacing: 0; }
-  .dador-palavra b { font-size: 18px; }
+  /* Quem dá a pista precisa ver as palavras inteiras: no celular uma fica embaixo da outra,
+     cada uma com a largura toda da janela. */
+  .dador-palavras { flex-direction: column; gap: 6px; }
+  .dador-palavra { width: 100%; }
 }
