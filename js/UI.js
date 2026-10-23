@@ -540,7 +540,7 @@ var UI = (function () {
           '</div>' +
           '<form class="form-pista" autocomplete="off">' +
             '<label for="campo-pista">Uma palavra que ligue as duas</label>' +
-            '<input id="campo-pista" name="pista" type="text" maxlength="30" autocapitalize="none" spellcheck="false" placeholder="Sua pista">' +
+            '<input id="campo-pista" name="pista" type="text" maxlength="30" autocapitalize="characters" spellcheck="false" placeholder="Sua pista">' +
             '<div class="erro-campo" role="alert"></div>' +
             '<div class="acoes">' +
               '<button type="button" class="botao botao-fantasma" data-acao="voltar-passar">' + (online ? 'Ver tabuleiro' : 'Esconder') + '</button>' +

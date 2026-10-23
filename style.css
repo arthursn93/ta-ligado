@@ -1095,3 +1095,8 @@ button { font: inherit; color: inherit; }
   .marca { font-size: 21px; }
   .topo .botao { padding: 6px 10px; font-size: 13px; }
 }
+
+/* A pista aparece em maiúsculas enquanto é digitada. Só o visual muda:
+   o texto enviado é o digitado, e a comparação com a grade já ignora maiúsculas. */
+#campo-pista { text-transform: uppercase; }
+#campo-pista::placeholder { text-transform: none; }
