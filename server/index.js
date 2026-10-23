@@ -90,7 +90,7 @@ const TIPOS = {
   '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.webmanifest': 'application/manifest+json'
 };
-const ARQUIVOS_SOLTOS = ['style.css', 'privacidade.html', 'favicon.svg', 'icone-180.png', 'previa.png'];
+const ARQUIVOS_SOLTOS = ['style.css', 'privacidade.html', 'favicon.svg', 'icone-180.png', 'previa.png', 'previa-2.png'];
 function arquivoPublico(url) {
   let caminho;
   try { caminho = decodeURIComponent(url.split('?')[0]); } catch (e) { return null; } // URL malformada

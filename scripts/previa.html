@@ -1,0 +1,62 @@
+<!doctype html>
+<!-- Molde da imagem de prévia do link (1200×630). Gerada por scripts/gerar-previa.js. Cores = style.css. -->
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chewy&family=Nunito:wght@800;900&display=block">
+<style>
+  :root {
+    --fundo: #f7f8fc; --superficie: #fff; --linha: #d9dcea; --texto: #283047;
+    --primaria: #6558d3; --primaria-escura: #4b3fb8; --sucesso: #58c98d; --sucesso-forte: #1f7a4d;
+    --destaque: #ffd166;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    width: 1200px; height: 630px; overflow: hidden; position: relative;
+    font-family: 'Nunito', sans-serif; color: var(--texto); background: var(--fundo);
+    background-image:
+      radial-gradient(circle at 0% 0%, rgba(101, 88, 211, 0.16) 0, transparent 460px),
+      radial-gradient(circle at 100% 100%, rgba(88, 201, 141, 0.2) 0, transparent 520px);
+  }
+  .faixa { position: absolute; top: 0; left: 0; right: 0; height: 14px;
+    background: linear-gradient(90deg, var(--primaria) 0 33%, var(--destaque) 33% 66%, var(--sucesso) 66%); }
+  .texto { position: absolute; left: 72px; top: 150px; width: 560px; }
+  .marca {
+    font-family: 'Chewy', cursive; font-size: 112px; line-height: 1; color: #fff; white-space: nowrap;
+    -webkit-text-stroke: 16px var(--primaria); paint-order: stroke fill;
+    text-shadow: 0 9px 0 var(--primaria-escura); transform: rotate(-3deg); display: inline-block;
+  }
+  .marca span { color: var(--destaque); }
+  .sub { margin-top: 30px; font-size: 38px; font-weight: 900; line-height: 1.25; }
+  .pilula { display: inline-block; margin-top: 30px; padding: 12px 28px; border-radius: 999px;
+    background: var(--primaria); color: #fff; font-size: 28px; font-weight: 900;
+    box-shadow: 0 6px 0 var(--primaria-escura); }
+  .tabuleiro {
+    position: absolute; right: 70px; top: 92px; width: 452px; padding: 22px; border-radius: 28px;
+    background: var(--superficie); border: 5px solid var(--primaria); box-shadow: 0 10px 0 var(--primaria-escura), 0 24px 48px rgba(40,48,71,.18);
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; transform: rotate(3deg);
+  }
+  .c { height: 92px; border-radius: 16px; display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 21px; letter-spacing: .5px; }
+  .vazio { border: 3px dashed var(--linha); }
+  .palavra { background: var(--destaque); box-shadow: 0 4px 0 #e0ac2c; }
+  .canto { background: transparent; }
+  .acerto { background: var(--sucesso-forte); color: #fff; font-size: 44px; box-shadow: 0 4px 0 #155637; }
+  .escolha { background: var(--primaria); color: #fff; box-shadow: 0 4px 0 var(--primaria-escura); }
+</style>
+</head>
+<body>
+  <div class="faixa"></div>
+  <div class="texto">
+    <div class="marca">Tá <span>Ligado?</span></div>
+    <p class="sub">Uma palavra liga duas.<br>Jogue com a turma, cada um no seu celular.</p>
+    <span class="pilula">Grátis · sem cadastro</span>
+  </div>
+  <div class="tabuleiro" aria-hidden="true">
+    <div class="c canto"></div><div class="c palavra">MAR</div><div class="c palavra">FOGO</div><div class="c palavra">LUA</div>
+    <div class="c palavra">SOL</div><div class="c escolha">PRAIA</div><div class="c vazio"></div><div class="c vazio"></div>
+    <div class="c palavra">BOLO</div><div class="c vazio"></div><div class="c acerto">✓</div><div class="c vazio"></div>
+    <div class="c palavra">FESTA</div><div class="c vazio"></div><div class="c vazio"></div><div class="c escolha">NOITE</div>
+  </div>
+</body>
+</html>

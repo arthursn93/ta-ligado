@@ -156,7 +156,7 @@ Abra o `index.html` direto no navegador (dois cliques, sem servidor) e o aparelh
 | `js/Theme.js` | Skins de cor. |
 | `style.css` | Visual estilo jogo de cartas retrô. |
 | `privacidade.html` | Privacidade e termos de uso. |
-| `favicon.svg`, `icone-180.png`, `previa.png` | Ícone da aba, ícone do celular e imagem da prévia do link (WhatsApp etc.). |
+| `favicon.svg`, `icone-180.png`, `previa-2.png` | Ícone da aba, ícone do celular e imagem da prévia do link (WhatsApp etc.), nas cores do jogo. Para refazer a prévia e o ícone do celular: edite `scripts/previa.html` ou `favicon.svg` e rode `node scripts/gerar-previa.js` (usa o Playwright). Se mudar a imagem, troque também o nome do arquivo, porque o WhatsApp guarda a prévia antiga. |
 | `testes/` | Testes da lógica, das salas e do servidor. |
 | `scripts/backup-*`, `docs/backup.md` | Backup diário do banco: cópia, criptografia, restauração de teste e o usuário só de leitura do Neon. |
 

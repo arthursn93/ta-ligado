@@ -39,7 +39,7 @@ test('URL malformada dá 404 e o servidor continua de pé', async (t) => {
 test('arquivos novos, compressão e cabeçalhos de segurança', async (t) => {
   const srv = await subir();
   t.after(() => srv.io.close());
-  for (const arquivo of ['/privacidade.html', '/favicon.svg', '/icone-180.png', '/previa.png', '/socket.io/socket.io.min.js']) {
+  for (const arquivo of ['/privacidade.html', '/favicon.svg', '/icone-180.png', '/previa.png', '/previa-2.png', '/socket.io/socket.io.min.js']) {
     assert.equal((await pedirHttp(srv.porta, arquivo)).status, 200, arquivo);
   }
   const pagina = await pedirHttp(srv.porta, '/', { 'Accept-Encoding': 'gzip', 'X-Forwarded-Proto': 'https' });
@@ -47,7 +47,7 @@ test('arquivos novos, compressão e cabeçalhos de segurança', async (t) => {
   assert.match(pagina.headers['content-security-policy'], /default-src 'self'/);
   assert.equal(pagina.headers['x-content-type-options'], 'nosniff');
   const html = require('zlib').gunzipSync(pagina.corpo).toString('utf8');
-  assert.ok(html.includes('https://localhost:' + srv.porta + '/previa.png'), 'prévia com endereço completo');
+  assert.ok(html.includes('https://localhost:' + srv.porta + '/previa-2.png'), 'prévia com endereço completo');
   assert.ok(!html.includes('{{ORIGEM}}'));
   const semGzip = await pedirHttp(srv.porta, '/style.css');
   assert.equal(semGzip.headers['content-encoding'], undefined);
@@ -119,4 +119,16 @@ test('erro inesperado num evento não derruba o servidor', async (t) => {
   assert.equal(r.ok, false);
   assert.match(r.erro, /Algo deu errado/);
   assert.ok((await a.pedir('criar', { nome: 'Ana', token: 'tA' })).ok);
+});
+
+test('prévia do link: 1200×630, menos de 300 KB, e a pista aparece em maiúsculas', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const png = fs.readFileSync(path.join(__dirname, '..', 'previa-2.png'));
+  assert.equal(png.readUInt32BE(16), 1200);
+  assert.equal(png.readUInt32BE(20), 630);
+  assert.ok(png.length < 300 * 1024, png.length + ' bytes');
+  const css = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
+  assert.match(css, /#campo-pista, \.faixa-palavra, \.celula-pista, \.cab-palavra \{ text-transform: uppercase; \}/);
+  assert.match(fs.readFileSync(path.join(__dirname, '..', 'js', 'UI.js'), 'utf8'), /id="campo-pista"[^>]*autocapitalize="characters"/);
 });
