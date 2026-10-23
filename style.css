@@ -457,6 +457,8 @@ button { font: inherit; color: inherit; }
   inset: 0;
   z-index: 10;
   display: grid;
+  /* A coluna nunca passa da largura da tela, mesmo com palavra comprida dentro da janela. */
+  grid-template-columns: minmax(0, 1fr);
   place-items: center;
   padding: 20px;
   overflow-y: auto;
@@ -554,6 +556,8 @@ button { font: inherit; color: inherit; }
   color: var(--tinta-suave);
 }
 .dador-palavra b { font-size: 22px; transform: rotate(-1.5deg); }
+/* Quem dá a pista precisa ver a palavra inteira: se não couber, ela quebra em vez de ganhar "…". */
+.dador-palavra b { white-space: normal; overflow-wrap: anywhere; }
 .dador-palavra:last-child b { transform: rotate(1.5deg); }
 
 .form-pista { margin-top: 20px; text-align: left; }
@@ -1096,13 +1100,15 @@ button { font: inherit; color: inherit; }
   .topo .botao { padding: 6px 10px; font-size: 13px; }
 }
 
-/* A pista aparece em maiúsculas enquanto é digitada, no topo, nas casas e nas palavras das colunas e linhas. Só o visual muda:
+/* A pista aparece em maiúsculas enquanto é digitada, no topo, nas casas, no painel, na janela de quem dá a pista e nas palavras das colunas e linhas. Só o visual muda:
    o texto enviado é o digitado, e a comparação com a grade já ignora maiúsculas. */
-#campo-pista, .faixa-palavra, .celula-pista, .cab-palavra { text-transform: uppercase; }
+#campo-pista, .faixa-palavra, .celula-pista, .cab-palavra,
+.painel-palavras span, .dador-palavra b, .pista-dada { text-transform: uppercase; }
 #campo-pista::placeholder { text-transform: none; }
 @media (max-width: 560px) {
   /* Em maiúsculas a palavra ocupa mais espaço: a letra diminui um pouco e a coluna das linhas alarga. */
   :root { --cab-largura: 82px; }
   .cab-coluna .cab-palavra { max-height: 100px; font-size: 12px; letter-spacing: 0; }
   .cab-linha .cab-palavra { font-size: 9.5px; letter-spacing: 0; }
+  .dador-palavra b { font-size: 18px; }
 }

@@ -468,7 +468,7 @@ var UI = (function () {
           (podeRecomecar() ? '<button class="botao botao-primario" data-acao="nova-confirmar">Jogar de novo</button>' : '');
       } else if (etapa === 'assistindo') {
         html = '<div class="painel-info">' + (ativa ? blocoPalavras(v, ativa)
-          : '<div class="painel-detalhe">Você deu a pista <b>' + esc(v.pista) + '</b>. Agora é com a turma!</div>') + '</div>';
+          : '<div class="painel-detalhe">Você deu a pista <b class="pista-dada">' + esc(v.pista) + '</b>. Agora é com a turma!</div>') + '</div>';
       } else if (etapa === 'dador-oculto') {
         html = '<div class="painel-info">' + (ativa ? blocoPalavras(v, ativa)
           : '<div class="painel-detalhe">Sua vez de dar a pista. Olhe o tabuleiro com calma.</div>') + '</div>' +
