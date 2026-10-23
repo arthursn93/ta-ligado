@@ -1096,7 +1096,7 @@ button { font: inherit; color: inherit; }
   .topo .botao { padding: 6px 10px; font-size: 13px; }
 }
 
-/* A pista aparece em maiúsculas enquanto é digitada. Só o visual muda:
+/* A pista aparece em maiúsculas enquanto é digitada, no topo e nas casas do tabuleiro. Só o visual muda:
    o texto enviado é o digitado, e a comparação com a grade já ignora maiúsculas. */
-#campo-pista { text-transform: uppercase; }
+#campo-pista, .faixa-palavra, .celula-pista { text-transform: uppercase; }
 #campo-pista::placeholder { text-transform: none; }
