@@ -150,3 +150,25 @@ test('coordenada secreta: palavra comprida vira letreiro dentro do retângulo, s
   assert.doesNotMatch(css, /\.dador-palavras \{ flex-direction: column/);
   assert.match(css, /@media \(max-width: 340px\) \{[^}]*\.form-pista \.acoes \{ gap: 6px; \}\n  \.form-pista \.acoes \.botao \{ padding-left: 12px; padding-right: 12px; \}/);
 });
+
+test('privacidade: conta backup, prazo, onde ficam os dados, direitos e responsável', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'privacidade.html'), 'utf8');
+  for (const trecho of [
+    'guardada por 30 dias no GitHub',
+    'sem prazo para acabar',
+    'sem IP, nome nem código de sala',
+    '<strong>Neon</strong>',
+    'Oregon, nos Estados Unidos',
+    '<h2>Seus direitos</h2>',
+    'são <strong>públicas</strong>',
+    'por até 30 dias',
+    '<h2>Responsável e contato</h2>',
+    'mantido por <strong>arthursn93</strong>',
+    'https://github.com/arthursn93/ta-ligado/issues'
+  ]) assert.ok(html.includes(trecho), 'falta: ' + trecho);
+  // O prazo do backup na página é o mesmo do workflow.
+  const backup = fs.readFileSync(path.join(__dirname, '..', '.github', 'workflows', 'backup.yml'), 'utf8');
+  assert.match(backup, /retention-days: 30\b/);
+});

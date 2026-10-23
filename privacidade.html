@@ -84,7 +84,7 @@
     </div>
     <article>
       <h1>Privacidade e termos de uso</h1>
-      <p class="suave">Última atualização: outubro de 2026.</p>
+      <p class="suave">Última atualização: 23 de outubro de 2026.</p>
 
       <h2>Em resumo</h2>
       <p>O Tá Ligado? é um jogo gratuito, sem cadastro e sem anúncios. Guardamos o mínimo para a partida funcionar e apagamos quando a sala acaba. A exceção é o histórico das suas partidas, guardado sem nenhum dado pessoal além do nome que você usou na sala.</p>
@@ -93,7 +93,10 @@
       <ul>
         <li><strong>Nome que você digita:</strong> mostrado para quem está na mesma sala. Fica na memória do servidor só enquanto a sala existe.</li>
         <li><strong>Mensagens do chat:</strong> vistas só por quem está na sala. O servidor guarda as últimas 50 de cada sala, apenas na memória, e elas somem quando a sala é encerrada (quando todos saem ou o servidor reinicia). Não ficam gravadas em disco.</li>
-        <li><strong>Histórico das partidas:</strong> quando uma partida online termina, o servidor guarda o resultado da turma e o que cada um fez nela (pistas dadas e acertadas, palpites, cartas jogadas) junto com o nome usado na sala. Isso fica ligado a uma versão embaralhada do código do seu aparelho, que não dá para reverter, e serve só para mostrar suas estatísticas e seu progresso. Não guardamos e-mail, telefone, IP nem mensagens do chat.</li>
+        <li><strong>Histórico das partidas:</strong> quando uma partida online termina, o servidor guarda o resultado da turma, o código e o horário da sala, e o que cada um fez nela (pistas dadas e acertadas, palpites, cartas jogadas) junto com o nome usado na sala. Isso fica ligado a uma versão embaralhada do código do seu aparelho, que não dá para reverter, e serve só para mostrar suas estatísticas e seu progresso. Não guardamos e-mail, telefone, IP nem mensagens do chat.</li>
+        <li><strong>Por quanto tempo:</strong> o histórico das partidas, o progresso e as conquistas ficam guardados sem prazo para acabar, para o seu perfil continuar mostrando seus números. Você pode pedir para apagar a qualquer momento (veja "Seus direitos" abaixo).</li>
+        <li><strong>Cópia de segurança:</strong> uma vez por dia é feita uma cópia criptografada do banco de dados (com o histórico acima), guardada por 30 dias no GitHub. Ela só serve para recuperar o jogo se algo der errado e só pode ser aberta com uma senha que fica com o responsável.</li>
+        <li><strong>Registros do servidor:</strong> o jogo anota eventos técnicos (por exemplo, "uma partida terminou" ou "o servidor reiniciou") sem IP, nome nem código de sala. A Render, que hospeda o jogo, guarda esses registros por alguns dias.</li>
         <li><strong>No seu aparelho:</strong> o navegador guarda seu nome, a sala atual e um código aleatório que identifica o aparelho, para você voltar à partida se a página recarregar. Isso fica só no seu navegador e você pode apagar limpando os dados do site.</li>
       </ul>
 
@@ -103,11 +106,21 @@
       <h2>Quem mais vê seus dados</h2>
       <ul>
         <li><strong>Render</strong>, onde o jogo está hospedado, recebe seu endereço IP como qualquer site, e pode guardá-lo em registros técnicos.</li>
-        <li>O <strong>serviço de banco de dados</strong> onde o histórico das partidas fica guardado.</li>
+        <li><strong>Neon</strong>, o banco de dados onde o histórico das partidas fica guardado.</li>
+        <li><strong>GitHub</strong>, onde fica a cópia de segurança criptografada.</li>
         <li><strong>Google Fonts</strong> entrega as letras do jogo e também recebe seu endereço IP.</li>
         <li>O servidor do jogo usa seu IP só para limitar abusos (por exemplo, criar salas demais) e não o guarda.</li>
       </ul>
+      <p>O servidor do jogo e o banco de dados ficam em Oregon, nos Estados Unidos (Render e Neon, na região da AWS US West 2). O GitHub e o Google também podem tratar dados fora do Brasil. Ou seja, ao jogar, seus dados são enviados para fora do país.</p>
       <p>Não usamos cookies de rastreamento, não vendemos dados e não fazemos propaganda.</p>
+
+      <h2>Seus direitos</h2>
+      <p>Você pode pedir para saber o que está guardado sobre você, corrigir ou apagar seu histórico. Para pedir, abra uma conversa no endereço de contato abaixo.</p>
+      <ul>
+        <li><strong>Atenção:</strong> as conversas no GitHub são <strong>públicas</strong>, qualquer pessoa pode ler. Escreva só o nome que você usou nas salas e mais ou menos quando jogou. Não coloque e-mail, telefone ou outros dados.</li>
+        <li>Como o jogo não tem cadastro, ele não sabe quem você é. Pode ser que precisemos de mais detalhes da partida (por exemplo, com quem você jogou) para achar seu histórico.</li>
+        <li>Depois de apagado, o histórico ainda pode existir nas cópias de segurança por até 30 dias, até elas serem descartadas.</li>
+      </ul>
 
       <h2>Regras de uso</h2>
       <ul>
@@ -117,7 +130,8 @@
         <li>Menores de idade devem jogar com o conhecimento dos responsáveis.</li>
       </ul>
 
-      <h2>Contato</h2>
+      <h2>Responsável e contato</h2>
+      <p>O Tá Ligado? é mantido por <strong>arthursn93</strong>, no GitHub, que responde pelos dados do jogo.</p>
       <p>Dúvidas ou pedidos sobre seus dados: abra uma conversa em <a href="https://github.com/arthursn93/ta-ligado/issues">github.com/arthursn93/ta-ligado/issues</a>.</p>
     </article>
   </main>
