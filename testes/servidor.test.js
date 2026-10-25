@@ -146,3 +146,50 @@ test('TURN opcional pelas variáveis de ambiente', () => {
   const com = servidoresIce({ TURN_URL: 'turn:a.com:3478, turns:a.com:5349', TURN_USERNAME: 'u', TURN_CREDENTIAL: 'p' });
   assert.deepEqual(com[1], { urls: ['turn:a.com:3478', 'turns:a.com:5349'], username: 'u', credential: 'p' });
 });
+
+test('quatro aparelhos jogam uma partida inteira: todos dão pista, todos chutam e terminam iguais', async (t) => {
+  const srv = await subir();
+  const nomes = ['Ana', 'Bia', 'Caio', 'Duda'];
+  const aparelhos = nomes.map(() => cliente(srv.url));
+  t.after(() => { for (const s of aparelhos) s.close(); srv.io.close(); });
+
+  const criado = await aparelhos[0].pedir('criar', { nome: nomes[0], token: 'tok0' });
+  assert.ok(criado.ok);
+  for (let i = 1; i < 4; i++) {
+    assert.ok((await aparelhos[i].pedir('entrar', { codigo: criado.codigo, nome: nomes[i], token: 'tok' + i })).ok);
+  }
+  await Promise.all(aparelhos.map((s) => s.esperarEstado((e) => e.sala.jogadores.length === 4)));
+  assert.ok((await aparelhos[0].pedir('iniciar')).ok);
+
+  const deramPista = new Set(), chutaram = new Set();
+  for (let rodada = 0; rodada < 25; rodada++) {
+    // Cada aparelho espera ver a mesma rodada; só o dador da vez recebe a coordenada secreta.
+    const estados = await Promise.all(aparelhos.map((s) =>
+      s.esperarEstado((e) => e.jogo && e.jogo.historico.length === rodada && e.jogo.fase === 'pista')));
+    const iDador = estados.findIndex((e) => e.sala.dadorId === e.sala.euId);
+    assert.ok(iDador >= 0, 'rodada ' + rodada + ' sem dador');
+    estados.forEach((e, i) => assert.equal(!!e.jogo.coordenadaSecreta, i === iDador, 'segredo vazou na rodada ' + rodada));
+
+    const pista = String.fromCharCode(97 + rodada) + 'zqxw';
+    assert.ok((await aparelhos[iDador].pedir('acao', { acao: { tipo: 'DAR_PISTA', pista } })).ok);
+    deramPista.add(iDador);
+
+    // Quem chuta gira entre os outros três, para todos os aparelhos agirem.
+    const iChute = (iDador + 1 + (rodada % 3)) % 4;
+    await aparelhos[iChute].esperarEstado((e) => e.jogo.fase === 'palpite' && e.jogo.pista === pista);
+    const r = await aparelhos[iChute].pedir('acao', { acao: { tipo: 'CHUTAR', coordenada: estados[iDador].jogo.coordenadaSecreta } });
+    assert.ok(r.ok, 'chute recusado na rodada ' + rodada);
+    chutaram.add(iChute);
+  }
+
+  const finais = await Promise.all(aparelhos.map((s) => s.esperarEstado((e) => e.jogo.fase === 'fim')));
+  assert.equal(deramPista.size, 4, 'todos deram pista');
+  assert.equal(chutaram.size, 4, 'todos chutaram');
+  for (const e of finais) {
+    assert.equal(e.jogo.acertos, 25);
+    assert.equal(e.jogo.vitoriaMaxima, true);
+    assert.equal(e.sala.jogadores.length, 4);
+    assert.ok(e.sala.jogadores.every((j) => j.online));
+    assert.deepEqual(e.jogo.historico.map((h) => h.coordenada), finais[0].jogo.historico.map((h) => h.coordenada));
+  }
+});
