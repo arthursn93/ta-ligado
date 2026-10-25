@@ -6,6 +6,7 @@
  */
 (function () {
   'use strict';
+  var t = Textos.t;
   Theme.aplicar(Theme.salva());
   var raiz = document.getElementById('app');
   var som = Som.criar();
@@ -29,17 +30,17 @@
   }
 
   function mostrarConectando() {
-    telaSimples('<p class="lobby-sub" role="status">Conectando ao servidor…</p>' +
-      '<p class="suave lobby-sub">Na primeira vez do dia pode levar até 1 minuto.</p>');
+    telaSimples('<p class="lobby-sub" role="status">' + t('conexao.conectando') + '</p>' +
+      '<p class="suave lobby-sub">' + t('conexao.demora') + '</p>');
   }
 
   function mostrarFalha() {
     telaSimples('<section class="cartao-modal lobby-cartao" role="alert">' +
-      '<h2>Não deu para falar com o servidor</h2>' +
-      '<p>Confira a internet e tente de novo. Se preferir, dá para jogar passando um aparelho só.</p>' +
-      '<button type="button" class="botao botao-primario botao-largo" data-main="tentar">Tentar de novo</button>' +
+      '<h2>' + t('conexao.falhaTitulo') + '</h2>' +
+      '<p>' + t('conexao.falhaTexto') + '</p>' +
+      '<button type="button" class="botao botao-primario botao-largo" data-main="tentar">' + t('geral.tentarDeNovo') + '</button>' +
       '</section>' +
-      '<button type="button" class="botao botao-fantasma" data-main="local">Jogar num aparelho só</button>');
+      '<button type="button" class="botao botao-fantasma" data-main="local">' + t('geral.jogarLocal') + '</button>');
   }
 
   raiz.addEventListener('click', function (ev) {

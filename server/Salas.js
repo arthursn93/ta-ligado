@@ -14,6 +14,7 @@ const Game = require('../js/Game.js');
 const Partida = require('./progressao/Partida.js');
 const { hashToken } = require('./progressao/Perfil.js');
 const Log = require('./log.js');
+const { t } = require('../js/Textos.js');
 
 const LETRAS_CODIGO = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // sem I e O, que confundem com 1 e 0
 const MAX_JOGADORES = 10;
@@ -64,8 +65,8 @@ function criarGerenciador(opcoes) {
   /** Cria uma sala e coloca quem criou como anfitrião. */
   function criarSala(token, nome) {
     nome = limparNome(nome);
-    if (!token) return erro('Aparelho sem identificação. Recarregue a página.');
-    if (!nome) return erro('Digite seu nome.');
+    if (!token) return erro(t('servidor.semIdentificacao'));
+    if (!nome) return erro(t('geral.digiteNome'));
     const sala = {
       codigo: novoCodigo(), jogadores: [], anfitriaoId: null, jogo: null, dadorId: null, rodadaDoDador: 0,
       chat: [], seqMensagem: 0, partida: null, ultimaPartida: null, progresso: null
@@ -79,17 +80,17 @@ function criarGerenciador(opcoes) {
   /** Entra numa sala existente. Quem já estava (mesmo token) só volta ao seu lugar. */
   function entrar(codigo, token, nome) {
     const sala = salas.get(String(codigo || '').trim().toUpperCase());
-    if (!sala) return erro('Sala não encontrada. Confira o código.');
+    if (!sala) return erro(t('servidor.salaNaoEncontradaCodigo'));
     const existente = acharJogador(sala, token);
     if (existente) {
       existente.online = true;
       return { ok: true, sala };
     }
     nome = limparNome(nome);
-    if (!nome) return erro('Digite seu nome.');
-    if (sala.jogadores.length >= MAX_JOGADORES) return erro('A sala está cheia.');
+    if (!nome) return erro(t('geral.digiteNome'));
+    if (sala.jogadores.length >= MAX_JOGADORES) return erro(t('servidor.salaCheia'));
     if (sala.jogadores.some((j) => j.nome.toLowerCase() === nome.toLowerCase())) {
-      return erro('Já tem alguém com esse nome na sala.');
+      return erro(t('servidor.nomeRepetido'));
     }
     novoJogador(sala, token, nome);
     return { ok: true, sala };
@@ -187,10 +188,10 @@ function criarGerenciador(opcoes) {
   /** O anfitrião começa a partida (ou uma nova). */
   function iniciar(codigo, token) {
     const sala = salas.get(codigo);
-    if (!sala) return erro('Sala não encontrada.');
+    if (!sala) return erro(t('servidor.salaNaoEncontrada'));
     const jogador = acharJogador(sala, token);
-    if (!jogador || jogador.id !== sala.anfitriaoId) return erro('Só o anfitrião pode começar a partida.');
-    if (sala.jogadores.filter((j) => j.online).length < 2) return erro('Chame pelo menos mais uma pessoa.');
+    if (!jogador || jogador.id !== sala.anfitriaoId) return erro(t('servidor.soAnfitriao'));
+    if (sala.jogadores.filter((j) => j.online).length < 2) return erro(t('servidor.chamarMais'));
     if (!sala.jogo) {
       sala.jogo = criarJogo();
     } else {
@@ -207,16 +208,16 @@ function criarGerenciador(opcoes) {
   /** Uma ação de jogo vinda de um jogador. O servidor confere se é a vez dele. */
   function agir(codigo, token, acao) {
     const sala = salas.get(codigo);
-    if (!sala || !sala.jogo) return erro('A partida ainda não começou.');
+    if (!sala || !sala.jogo) return erro(t('servidor.naoComecou'));
     const jogador = acharJogador(sala, token);
-    if (!jogador) return erro('Você não está nesta sala.');
+    if (!jogador) return erro(t('servidor.foraDaSala'));
     const tipo = acao && acao.tipo;
     const souDador = jogador.id === sala.dadorId;
 
-    if (tipo === 'DAR_PISTA' && !souDador) return erro('Só quem está dando a pista pode fazer isso.');
-    if (tipo === 'CHUTAR' && souDador) return erro('Quem deu a pista não pode chutar.');
+    if (tipo === 'DAR_PISTA' && !souDador) return erro(t('servidor.soDador'));
+    if (tipo === 'CHUTAR' && souDador) return erro(t('servidor.dadorNaoChuta'));
     if (tipo === 'NOVA_PARTIDA') return iniciar(codigo, token);
-    if (tipo !== 'DAR_PISTA' && tipo !== 'CHUTAR') return erro('Ação desconhecida.');
+    if (tipo !== 'DAR_PISTA' && tipo !== 'CHUTAR') return erro(t('servidor.acaoDesconhecida'));
 
     const dador = sala.jogadores.find((j) => j.id === sala.dadorId);
     const resultado = sala.jogo.executar(acao);
@@ -247,19 +248,19 @@ function criarGerenciador(opcoes) {
   function enviarMensagem(codigo, token, texto, agora) {
     agora = agora || Date.now();
     const sala = salas.get(codigo);
-    if (!sala) return erro('Sala não encontrada.');
+    if (!sala) return erro(t('servidor.salaNaoEncontrada'));
     const jogador = acharJogador(sala, token);
-    if (!jogador) return erro('Você não está nesta sala.');
+    if (!jogador) return erro(t('servidor.foraDaSala'));
     // Como no jogo de mesa, quem dá a pista não pode dar dicas extras enquanto a carta está em jogo.
     if (sala.jogo && jogador.id === sala.dadorId && sala.jogo.visao().fase !== Game.FASE.FIM) {
-      return erro('Você está dando a pista: o chat volta quando a turma chutar.');
+      return erro(t('servidor.chatDador'));
     }
-    if (typeof texto !== 'string') return erro('Mensagem inválida.');
+    if (typeof texto !== 'string') return erro(t('servidor.mensagemInvalida'));
     texto = texto.replace(/[\u0000-\u001f\u007f\u200b-\u200f\u2028-\u202e]/g, ' ').replace(/\s+/g, ' ').trim();
-    if (!texto) return erro('Escreva alguma coisa.');
-    if (texto.length > TAMANHO_MAX_MENSAGEM) return erro('Mensagem longa demais (até ' + TAMANHO_MAX_MENSAGEM + ' letras).');
-    jogador.envios = jogador.envios.filter((t) => agora - t < JANELA_MENSAGENS_MS);
-    if (jogador.envios.length >= LIMITE_MENSAGENS) return Object.assign(erro('Calma! Espere um pouquinho para mandar outra.'), { limite: 'chat' });
+    if (!texto) return erro(t('servidor.escreva'));
+    if (texto.length > TAMANHO_MAX_MENSAGEM) return erro(t('servidor.mensagemLonga', { max: TAMANHO_MAX_MENSAGEM }));
+    jogador.envios = jogador.envios.filter((quando) => agora - quando < JANELA_MENSAGENS_MS);
+    if (jogador.envios.length >= LIMITE_MENSAGENS) return Object.assign(erro(t('servidor.calma')), { limite: 'chat' });
     jogador.envios.push(agora);
     const mensagem = { id: ++sala.seqMensagem, autorId: jogador.id, nome: jogador.nome, texto, em: agora };
     sala.chat.push(mensagem);
@@ -270,10 +271,10 @@ function criarGerenciador(opcoes) {
   /** Entrar, sair ou mudar o microfone na conversa por voz da sala. `socketId` é o aparelho que fala. */
   function definirVoz(codigo, token, estado, socketId) {
     const sala = salas.get(codigo);
-    if (!sala) return erro('Sala não encontrada.');
+    if (!sala) return erro(t('servidor.salaNaoEncontrada'));
     const jogador = acharJogador(sala, token);
-    if (!jogador) return erro('Você não está nesta sala.');
-    if (estado !== null && ESTADOS_VOZ.indexOf(estado) === -1) return erro('Estado de voz inválido.');
+    if (!jogador) return erro(t('servidor.foraDaSala'));
+    if (estado !== null && ESTADOS_VOZ.indexOf(estado) === -1) return erro(t('servidor.vozInvalida'));
     jogador.voz = estado;
     jogador.vozSocket = estado ? socketId : null;
     return { ok: true, sala };

@@ -9,6 +9,7 @@
 var Som = (function () {
   'use strict';
 
+  var t = typeof Textos !== 'undefined' ? Textos.t : require('./Textos.js').t;
   var CHAVE = 'taligado.som';
   var VOLUME = 0.12;
 
@@ -96,7 +97,7 @@ var Som = (function () {
   /** Botão de ligar/desligar, igual no jogo e na sala de espera. */
   function botao(ligado) {
     return '<button type="button" class="botao botao-fantasma botao-som" data-som aria-pressed="' + (ligado ? 'true' : 'false') +
-      '" aria-label="Som" title="' + (ligado ? 'Desligar o som' : 'Ligar o som') + '">' +
+      '" aria-label="' + t('som.rotulo') + '" title="' + (ligado ? t('som.desligar') : t('som.ligar')) + '">' +
       '<span aria-hidden="true">' + (ligado ? '🔊' : '🔇') + '</span></button>';
   }
 
