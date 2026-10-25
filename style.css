@@ -1119,3 +1119,7 @@ button { font: inherit; color: inherit; }
 /* Letreiro: com palavra comprida, o texto desliza dentro do retângulo (o JS mede e anima). */
 .dador-palavra b.is-letreiro { text-overflow: clip; text-align: left; }
 .dador-palavra b.is-letreiro .letreiro { display: inline-block; will-change: transform; }
+
+/* Botão de som (ligar/desligar), no topo do jogo e na sala de espera. */
+.botao-som { flex: none; padding-left: 10px; padding-right: 10px; font-size: 18px; line-height: 1; }
+.topo .botao-som { margin-left: auto; padding-left: 10px; padding-right: 10px; }

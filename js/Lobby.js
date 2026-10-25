@@ -77,6 +77,7 @@ var Lobby = (function () {
     var tela = null;
     var ocupado = false;
     var acoesAtuais = null;
+    var onlineAntes = -1; // para tocar um som quando alguém entra na sala de espera
 
     function render() {
       var sala = rede.sala();
@@ -97,6 +98,7 @@ var Lobby = (function () {
         } else if (tela === 'sala') {
           raiz.innerHTML = MOLDE_SALA;
           if (opcoes.social) raiz.querySelector('.lobby-social').innerHTML = opcoes.social.slot();
+          if (opcoes.som) raiz.querySelector('.lobby-extras').insertAdjacentHTML('afterbegin', Som.botao(opcoes.som.ligado()));
         } else {
           raiz.innerHTML = '<div class="lobby"><h1 class="marca marca-grande">Tá <span>Ligado?</span></h1>' +
             '<p class="lobby-sub">Voltando para a sala…</p></div>';
@@ -123,6 +125,8 @@ var Lobby = (function () {
       }).join('');
 
       var online = sala.jogadores.filter(function (j) { return j.online; }).length;
+      if (opcoes.som && onlineAntes >= 0 && online > onlineAntes) opcoes.som.tocar('entrou');
+      onlineAntes = online;
       var html;
       if (rede.souAnfitriao()) {
         html = '<button type="button" class="botao botao-primario botao-largo" data-lobby="comecar"' +

@@ -90,6 +90,8 @@ var UI = (function () {
       sobreposicao: raiz.querySelector('.sobreposicao'),
       modal: raiz.querySelector('.cartao-modal')
     };
+    if (opcoes.som) el.nova.insertAdjacentHTML('beforebegin', Som.botao(opcoes.som.ligado()));
+    var eraMinhaVez = false; // online: para avisar com som quando chega a vez de dar a pista
     var celulas = {};
     var cabColunas = {};
     var cabLinhas = {};
@@ -136,6 +138,7 @@ var UI = (function () {
       if (!alvo) return;
       var coord = alvo.getAttribute('data-coord');
       selecionada = selecionada === coord ? null : coord;
+      if (selecionada && etapa === 'palpite') som('selecionar');
       render();
     });
 
@@ -182,6 +185,7 @@ var UI = (function () {
           var campo = el.modal.querySelector('input[name="pista"]');
           enviar({ tipo: 'DAR_PISTA', pista: campo ? campo.value : '' }, function (r) {
             if (!r.ok) { mostrarErroPista(r.erro); return; }
+            som('pista');
             if (online) return; // a tela muda quando o servidor mandar o novo estado
             etapa = 'palpite';
             selecionada = null;
@@ -196,10 +200,12 @@ var UI = (function () {
               if (online && etapa === 'palpite') { avisoPainel = res.erro; render(); }
               return;
             }
+            som('casa');
             if (online) return;
             etapa = 'resultado';
             selecionada = null;
             if (jogo.visao().ultimaJogada.acertou) confete(40);
+            som(jogo.visao().ultimaJogada.acertou ? 'acerto' : 'erro');
             render();
           });
           return;
@@ -207,6 +213,7 @@ var UI = (function () {
         case 'proxima':
           etapa = online ? etapaDoEstado(v) : v.fase === Game.FASE.FIM ? 'fim' : 'passar';
           if (etapa === 'fim' && v.vitoriaMaxima) confete(120);
+          if (etapa === 'fim') som(v.vitoriaMaxima ? 'vitoria' : 'fim');
           break;
         case 'sair-sala':
           opcoes.aoSair();
@@ -294,8 +301,12 @@ var UI = (function () {
         etapa = 'resultado';
         selecionada = null;
         if (v.ultimaJogada && v.ultimaJogada.acertou) confete(40);
+        if (v.ultimaJogada) som(v.ultimaJogada.acertou ? 'acerto' : 'erro');
       }
       jogadasVistas = jogadas;
+      var minhaVez = v.fase === Game.FASE.PISTA && souDador();
+      if (minhaVez && !eraMinhaVez) som('suaVez');
+      eraMinhaVez = minhaVez;
       if (v.fase !== Game.FASE.PALPITE) avisoPainel = '';
 
       var fica = etapa === 'resultado' ||
@@ -332,6 +343,7 @@ var UI = (function () {
       var erro = el.modal.querySelector('.erro-campo');
       var campo = el.modal.querySelector('input[name="pista"]');
       if (erro) erro.textContent = mensagem;
+      som('recusada');
       if (campo) {
         campo.classList.remove('tremer');
         void campo.offsetWidth; // reinicia a animação
@@ -610,6 +622,10 @@ var UI = (function () {
       });
     }
     window.addEventListener('resize', function () { if (!el.sobreposicao.hidden) letreiros(); });
+
+    function som(nome) {
+      if (opcoes.som) opcoes.som.tocar(nome);
+    }
 
     /** Chuva de confete nas cores do jogo. Some sozinha e respeita "reduzir movimento". */
     function confete(quantidade) {
