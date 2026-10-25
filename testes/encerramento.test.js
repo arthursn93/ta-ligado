@@ -143,7 +143,7 @@ test('o navegador (Rede.js) mostra o aviso e confirma o recebimento', async () =
     localStorage: { getItem: (k) => guardado[k] || null, setItem: (k, v) => { guardado[k] = v; }, removeItem: (k) => { delete guardado[k]; } },
     crypto: { randomUUID: () => 'token-do-navegador' }
   };
-  const Rede = vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../js/Rede.js'), 'utf8') + '\nRede', { window: janela, Promise });
+  const Rede = vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../js/Rede.js'), 'utf8') + '\nRede', { window: janela, Promise, Textos: require('../js/Textos.js') });
   const socket = conectar(srv.url, { transports: ['websocket'], forceNew: true, reconnection: false });
   const rede = Rede.criar(socket);
   await new Promise((ok) => socket.once('connect', ok));

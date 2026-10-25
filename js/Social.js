@@ -11,6 +11,7 @@
 var Social = (function () {
   'use strict';
 
+  var t = Textos.t;
   var TAMANHO_MAX = 200;
   var LARGURA_PAINEL_FIXO = 1100; // a partir daqui o chat fica aberto ao lado do jogo
 
@@ -46,14 +47,14 @@ var Social = (function () {
     var painel = document.createElement('aside');
     painel.className = 'chat';
     painel.hidden = true;
-    painel.setAttribute('aria-label', 'Chat da sala');
+    painel.setAttribute('aria-label', t('chat.titulo'));
     painel.innerHTML =
-      '<header class="chat-topo"><h2>Chat da sala</h2>' +
-      '<button type="button" class="chat-fechar" data-social="fechar-chat" aria-label="Fechar chat">✕</button></header>' +
+      '<header class="chat-topo"><h2>' + t('chat.titulo') + '</h2>' +
+      '<button type="button" class="chat-fechar" data-social="fechar-chat" aria-label="' + t('chat.fechar') + '">✕</button></header>' +
       '<ol class="chat-lista" aria-live="polite"></ol>' +
       '<form class="chat-form" autocomplete="off">' +
-        '<input name="texto" maxlength="' + TAMANHO_MAX + '" placeholder="Escreva para a sala…" aria-label="Mensagem">' +
-        '<button type="submit" class="botao botao-primario" aria-label="Enviar">➤</button>' +
+        '<input name="texto" maxlength="' + TAMANHO_MAX + '" placeholder="' + t('chat.exemplo') + '" aria-label="' + t('chat.mensagem') + '">' +
+        '<button type="submit" class="botao botao-primario" aria-label="' + t('chat.enviar') + '">➤</button>' +
       '</form>' +
       '<p class="chat-erro" role="alert"></p>';
     document.body.appendChild(painel);
@@ -101,7 +102,7 @@ var Social = (function () {
           '<span class="msg-texto">' + esc(m.texto) + '</span>' +
           '<time>' + ('0' + hora.getHours()).slice(-2) + ':' + ('0' + hora.getMinutes()).slice(-2) + '</time>' +
           '</li>';
-      }).join('') : '<li class="msg-vazia">Nenhuma mensagem ainda. Diga oi para a turma!</li>';
+      }).join('') : '<li class="msg-vazia">' + t('chat.vazio') + '</li>';
       if (forcarFim || perto) lista.scrollTop = lista.scrollHeight;
     }
 
@@ -116,7 +117,7 @@ var Social = (function () {
       var texto = campo.value.trim();
       if (!texto) return;
       rede.emitir('chat', { texto: texto }).then(function (r) {
-        erroChat = r && r.ok ? '' : (r && r.erro) || 'Não deu para enviar.';
+        erroChat = r && r.ok ? '' : (r && r.erro) || t('chat.erroEnviar');
         if (r && r.ok) campo.value = '';
         atualizar();
       });
@@ -191,13 +192,13 @@ var Social = (function () {
 
     function aplicarMicrofone() {
       if (!voz.stream) return;
-      voz.stream.getAudioTracks().forEach(function (t) { t.enabled = voz.estado === 'ligado'; });
+      voz.stream.getAudioTracks().forEach(function (trilha) { trilha.enabled = voz.estado === 'ligado'; });
     }
 
     function sairDaVoz() {
       voz.estado = null;
       Object.keys(voz.pares).forEach(fecharPar);
-      if (voz.stream) voz.stream.getTracks().forEach(function (t) { t.stop(); });
+      if (voz.stream) voz.stream.getTracks().forEach(function (trilha) { trilha.stop(); });
       voz.stream = null;
       voz.medidores = {};
       voz.falando = {};
@@ -213,7 +214,7 @@ var Social = (function () {
     });
 
     window.addEventListener('pagehide', function () {
-      if (voz.stream) voz.stream.getTracks().forEach(function (t) { t.stop(); });
+      if (voz.stream) voz.stream.getTracks().forEach(function (trilha) { trilha.stop(); });
     });
 
     // ---------- Voz: conexões WebRTC (cada um com cada um) ----------
@@ -269,7 +270,7 @@ var Social = (function () {
       };
 
       if (iniciador) {
-        if (voz.stream) voz.stream.getAudioTracks().forEach(function (t) { pc.addTrack(t, voz.stream); });
+        if (voz.stream) voz.stream.getAudioTracks().forEach(function (trilha) { pc.addTrack(trilha, voz.stream); });
         else pc.addTransceiver('audio', { direction: 'recvonly' });
         pc.createOffer()
           .then(function (oferta) { return pc.setLocalDescription(oferta); })
@@ -297,7 +298,7 @@ var Social = (function () {
           pc.setRemoteDescription(dados.sdp)
             .then(function () {
               par.temRemota = true;
-              if (voz.stream) voz.stream.getAudioTracks().forEach(function (t) { pc.addTrack(t, voz.stream); });
+              if (voz.stream) voz.stream.getAudioTracks().forEach(function (trilha) { pc.addTrack(trilha, voz.stream); });
               return pc.createAnswer();
             })
             .then(function (resposta) { return pc.setLocalDescription(resposta); })
@@ -396,27 +397,27 @@ var Social = (function () {
       var html;
       if (tipo === 'pedir') {
         html = '<div class="selo" aria-hidden="true">🎙️</div>' +
-          '<h2>Conversar por voz com a sala?</h2>' +
-          '<p class="suave">O navegador vai perguntar se pode usar o seu microfone. Você pode desligar o microfone quando quiser.</p>' +
+          '<h2>' + t('voz.pedirTitulo') + '</h2>' +
+          '<p class="suave">' + t('voz.pedirTexto') + '</p>' +
           '<div class="acoes acoes-coluna">' +
-            '<button class="botao botao-primario" data-social="usar-mic">Usar microfone</button>' +
-            '<button class="botao botao-fantasma" data-social="so-ouvir">Só ouvir</button>' +
-            '<button class="botao botao-fantasma" data-social="cancelar">Agora não</button>' +
+            '<button class="botao botao-primario" data-social="usar-mic">' + t('voz.usarMicrofone') + '</button>' +
+            '<button class="botao botao-fantasma" data-social="so-ouvir">' + t('voz.soOuvir') + '</button>' +
+            '<button class="botao botao-fantasma" data-social="cancelar">' + t('voz.agoraNao') + '</button>' +
           '</div>';
       } else if (tipo === 'negado') {
         html = '<div class="selo" aria-hidden="true">🔒</div>' +
-          '<h2>O microfone está bloqueado</h2>' +
-          '<p class="suave">Para falar, libere o microfone para este site: toque no cadeado ao lado do endereço e permita o microfone. Enquanto isso, dá para entrar só ouvindo.</p>' +
+          '<h2>' + t('voz.negadoTitulo') + '</h2>' +
+          '<p class="suave">' + t('voz.negadoTexto') + '</p>' +
           '<div class="acoes acoes-coluna">' +
-            '<button class="botao botao-primario" data-social="so-ouvir">Entrar só ouvindo</button>' +
-            '<button class="botao botao-fantasma" data-social="usar-mic">Tentar de novo</button>' +
-            '<button class="botao botao-fantasma" data-social="cancelar">Fechar</button>' +
+            '<button class="botao botao-primario" data-social="so-ouvir">' + t('voz.entrarOuvindo') + '</button>' +
+            '<button class="botao botao-fantasma" data-social="usar-mic">' + t('geral.tentarDeNovo') + '</button>' +
+            '<button class="botao botao-fantasma" data-social="cancelar">' + t('voz.fechar') + '</button>' +
           '</div>';
       } else {
         html = '<div class="selo" aria-hidden="true">😕</div>' +
-          '<h2>Este navegador não tem voz</h2>' +
-          '<p class="suave">Tente pelo Chrome, Safari, Edge ou Firefox atualizados. O chat por texto continua funcionando.</p>' +
-          '<div class="acoes"><button class="botao botao-primario" data-social="cancelar">Entendi</button></div>';
+          '<h2>' + t('voz.semSuporteTitulo') + '</h2>' +
+          '<p class="suave">' + t('voz.semSuporteTexto') + '</p>' +
+          '<div class="acoes"><button class="botao botao-primario" data-social="cancelar">' + t('voz.entendi') + '</button></div>';
       }
       cartao.innerHTML = html;
       sobreposicao.hidden = false;
@@ -464,15 +465,15 @@ var Social = (function () {
 
     function botoesHtml() {
       var rotulo, icone, classe;
-      if (voz.estado === 'ligado') { icone = '🎙️'; rotulo = 'Microfone ligado. Toque para desligar'; classe = ' is-ligado'; }
-      else if (voz.estado === 'mudo') { icone = '🔇'; rotulo = 'Microfone desligado. Toque para ligar'; classe = ' is-mudo'; }
-      else if (voz.estado === 'ouvindo') { icone = '🎧'; rotulo = 'Só ouvindo. Toque para usar o microfone'; classe = ' is-ouvindo'; }
-      else { icone = '🎙️'; rotulo = 'Entrar na conversa por voz'; classe = ''; }
+      if (voz.estado === 'ligado') { icone = '🎙️'; rotulo = t('voz.botaoLigado'); classe = ' is-ligado'; }
+      else if (voz.estado === 'mudo') { icone = '🔇'; rotulo = t('voz.botaoMudo'); classe = ' is-mudo'; }
+      else if (voz.estado === 'ouvindo') { icone = '🎧'; rotulo = t('voz.botaoOuvindo'); classe = ' is-ouvindo'; }
+      else { icone = '🎙️'; rotulo = t('voz.botaoEntrar'); classe = ''; }
       return '<button type="button" class="botao-social botao-voz' + classe + '" data-social="voz" title="' + rotulo + '" aria-label="' + rotulo + '">' +
-          '<span aria-hidden="true">' + icone + '</span>' + (voz.estado ? '' : '<span class="botao-social-texto">Voz</span>') + '</button>' +
-        (voz.estado ? '<button type="button" class="botao-social botao-sair-voz" data-social="sair-voz" title="Sair da voz" aria-label="Sair da conversa por voz">✕</button>' : '') +
-        '<button type="button" class="botao-social botao-chat' + (chatAberto ? ' is-aberto' : '') + '" data-social="chat" title="Chat" aria-label="Chat' +
-          (naoLidas ? ', ' + naoLidas + ' mensagens novas' : '') + '" aria-expanded="' + chatAberto + '">' +
+          '<span aria-hidden="true">' + icone + '</span>' + (voz.estado ? '' : '<span class="botao-social-texto">' + t('voz.botao') + '</span>') + '</button>' +
+        (voz.estado ? '<button type="button" class="botao-social botao-sair-voz" data-social="sair-voz" title="' + t('voz.sairTitulo') + '" aria-label="' + t('voz.sairRotulo') + '">✕</button>' : '') +
+        '<button type="button" class="botao-social botao-chat' + (chatAberto ? ' is-aberto' : '') + '" data-social="chat" title="' + t('chat.botao') + '" aria-label="' + t('chat.botao') +
+          (naoLidas ? t('chat.novas', { n: naoLidas }) : '') + '" aria-expanded="' + chatAberto + '">' +
           '<span aria-hidden="true">💬</span>' + (naoLidas ? '<span class="badge">' + (naoLidas > 9 ? '9+' : naoLidas) + '</span>' : '') +
         '</button>';
     }
@@ -485,7 +486,7 @@ var Social = (function () {
 
       var bloqueado = naSala && dadorDaVez();
       campo.disabled = bloqueado;
-      campo.placeholder = bloqueado ? 'Você está dando a pista: o chat volta depois do chute.' : 'Escreva para a sala…';
+      campo.placeholder = bloqueado ? t('chat.bloqueado') : t('chat.exemplo');
       erroEl.textContent = bloqueado ? '' : erroChat;
 
       // Só troca o HTML quando muda, para não roubar o foco nem reiniciar animações.
@@ -509,7 +510,7 @@ var Social = (function () {
       iconeVoz: function (j) {
         if (!j.voz) return '';
         var icone = j.voz === 'ligado' ? '🎙️' : j.voz === 'mudo' ? '🔇' : '🎧';
-        var texto = j.voz === 'ligado' ? 'microfone ligado' : j.voz === 'mudo' ? 'microfone desligado' : 'só ouvindo';
+        var texto = t(j.voz === 'ligado' ? 'voz.iconeLigado' : j.voz === 'mudo' ? 'voz.iconeMudo' : 'voz.iconeOuvindo');
         return ' <span class="icone-voz" title="' + texto + '" aria-label="' + texto + '">' + icone + '</span>';
       },
       atualizar: atualizar

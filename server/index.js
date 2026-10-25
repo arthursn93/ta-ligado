@@ -30,6 +30,7 @@ const zlib = require('zlib');
 const { Server } = require('socket.io');
 const { criarGerenciador } = require('./Salas.js');
 const Log = require('./log.js');
+const { t } = require('../js/Textos.js');
 
 const RAIZ = path.join(__dirname, '..');
 const TEMPO_SALA_VAZIA_MS = 10 * 60 * 1000;
@@ -157,7 +158,7 @@ function criarLimitador(limite) {
   return {
     estourou(chave, agora) {
       agora = agora || Date.now();
-      const lista = (registros.get(chave) || []).filter((t) => agora - t < limite.janelaMs);
+      const lista = (registros.get(chave) || []).filter((quando) => agora - quando < limite.janelaMs);
       registros.set(chave, lista);
       return lista.length >= limite.vezes;
     },
@@ -169,7 +170,7 @@ function criarLimitador(limite) {
     limpar(agora) {
       agora = agora || Date.now();
       for (const [chave, lista] of registros) {
-        if (!lista.some((t) => agora - t < limite.janelaMs)) registros.delete(chave);
+        if (!lista.some((quando) => agora - quando < limite.janelaMs)) registros.delete(chave);
       }
     }
   };
@@ -332,7 +333,7 @@ function criarServidor(opcoes) {
       } catch (e) {
         log.erro('erro_evento', e, { nome });
         const ack = args[args.length - 1];
-        if (typeof ack === 'function') ack({ ok: false, erro: 'Algo deu errado. Tente de novo.' });
+        if (typeof ack === 'function') ack({ ok: false, erro: t('servidor.algoErrado') });
       }
     };
   }
@@ -372,8 +373,8 @@ function criarServidor(opcoes) {
 
     socket.on('criar', (dados, ack) => {
       dados = dados || {};
-      if (!tokenValido(dados.token)) return responder(ack, { ok: false, erro: 'Aparelho sem identificação. Recarregue a página.' });
-      if (limiteCriar.estourou(ip)) { bloqueios.contar('criar'); return responder(ack, { ok: false, erro: 'Muitas salas criadas daqui. Espere um minuto.' }); }
+      if (!tokenValido(dados.token)) return responder(ack, { ok: false, erro: t('servidor.semIdentificacao') });
+      if (limiteCriar.estourou(ip)) { bloqueios.contar('criar'); return responder(ack, { ok: false, erro: t('servidor.muitasSalas') }); }
       limiteCriar.contar(ip);
       const r = salas.criarSala(dados.token, dados.nome);
       if (!r.ok) return responder(ack, r);
@@ -385,9 +386,9 @@ function criarServidor(opcoes) {
 
     socket.on('entrar', (dados, ack) => {
       dados = dados || {};
-      if (!tokenValido(dados.token)) return responder(ack, { ok: false, erro: 'Aparelho sem identificação. Recarregue a página.' });
+      if (!tokenValido(dados.token)) return responder(ack, { ok: false, erro: t('servidor.semIdentificacao') });
       // Só tentativas que falham contam: quem joga normalmente nunca esbarra no limite.
-      if (limiteEntrar.estourou(ip)) { bloqueios.contar('entrar'); return responder(ack, { ok: false, erro: 'Muitas tentativas. Espere um minuto e confira o código.' }); }
+      if (limiteEntrar.estourou(ip)) { bloqueios.contar('entrar'); return responder(ack, { ok: false, erro: t('servidor.muitasTentativas') }); }
       const r = salas.entrar(dados.codigo, dados.token, dados.nome);
       if (!r.ok) {
         limiteEntrar.contar(ip);
@@ -440,24 +441,24 @@ function criarServidor(opcoes) {
 
     socket.on('perfil', (dados, ack) => {
       dados = dados || {};
-      if (!armazem) return responder(ack, { ok: false, erro: 'O histórico não está disponível neste servidor.' });
-      if (!tokenValido(dados.token)) return responder(ack, { ok: false, erro: 'Aparelho sem identificação. Recarregue a página.' });
-      if (limitePerfil.estourou(ip)) { bloqueios.contar('perfil'); return responder(ack, { ok: false, erro: 'Muitos pedidos. Espere um minuto.' }); }
+      if (!armazem) return responder(ack, { ok: false, erro: t('servidor.semHistorico') });
+      if (!tokenValido(dados.token)) return responder(ack, { ok: false, erro: t('servidor.semIdentificacao') });
+      if (limitePerfil.estourou(ip)) { bloqueios.contar('perfil'); return responder(ack, { ok: false, erro: t('servidor.muitosPedidos') }); }
       limitePerfil.contar(ip);
       armazem.perfil(dados.token).then(
         (perfil) => responder(ack, { ok: true, perfil }),
         (e) => {
           log.erro('erro_ler_perfil', e);
-          responder(ack, { ok: false, erro: 'Não deu para carregar o histórico agora.' });
+          responder(ack, { ok: false, erro: t('servidor.erroHistorico') });
         });
     });
 
     socket.on('perfil:visual', (dados, ack) => {
       dados = dados || {};
-      if (!armazem) return responder(ack, { ok: false, erro: 'O perfil não está disponível neste servidor.' });
-      if (!tokenValido(dados.token)) return responder(ack, { ok: false, erro: 'Aparelho sem identificação. Recarregue a página.' });
-      if (typeof dados.tipo !== 'string' || typeof dados.id !== 'string') return responder(ack, { ok: false, erro: 'Item inválido.' });
-      if (limitePerfil.estourou(ip)) { bloqueios.contar('perfil'); return responder(ack, { ok: false, erro: 'Muitos pedidos. Espere um minuto.' }); }
+      if (!armazem) return responder(ack, { ok: false, erro: t('servidor.semPerfil') });
+      if (!tokenValido(dados.token)) return responder(ack, { ok: false, erro: t('servidor.semIdentificacao') });
+      if (typeof dados.tipo !== 'string' || typeof dados.id !== 'string') return responder(ack, { ok: false, erro: t('servidor.itemInvalido') });
+      if (limitePerfil.estourou(ip)) { bloqueios.contar('perfil'); return responder(ack, { ok: false, erro: t('servidor.muitosPedidos') }); }
       limitePerfil.contar(ip);
       armazem.escolherVisual(dados.token, dados.tipo, dados.id).then(
         (r) => {
@@ -466,7 +467,7 @@ function criarServidor(opcoes) {
         },
         (e) => {
           log.erro('erro_escolher_visual', e);
-          responder(ack, { ok: false, erro: 'Não deu para salvar agora.' });
+          responder(ack, { ok: false, erro: t('servidor.erroSalvar') });
         });
     });
 

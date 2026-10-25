@@ -9,6 +9,7 @@
 var Rede = (function () {
   'use strict';
 
+  var t = Textos.t;
   var CHAVE_TOKEN = 'ta-ligado:token';
   var CHAVE_SALA = 'ta-ligado:sala';
   var CHAVE_NOME = 'ta-ligado:nome';
@@ -50,9 +51,9 @@ var Rede = (function () {
 
     function pedir(evento, dados) {
       return new Promise(function (resolver) {
-        if (!socket.connected) { resolver({ ok: false, erro: 'Sem conexão. Tentando reconectar…' }); return; }
+        if (!socket.connected) { resolver({ ok: false, erro: t('conexao.semConexao') }); return; }
         socket.timeout(8000).emit(evento, dados || {}, function (falhou, resposta) {
-          resolver(falhou ? { ok: false, erro: 'O servidor não respondeu. Tente de novo.' } : resposta);
+          resolver(falhou ? { ok: false, erro: t('conexao.semResposta') } : resposta);
         });
       });
     }

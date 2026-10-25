@@ -20,24 +20,26 @@ var UI = (function () {
 
   var COLUNAS = Game.COLUNAS;
   var LINHAS = Game.LINHAS;
-  var AVISO_REINICIO = 'O jogo está sendo atualizado. Esta sala vai fechar em instantes.';
+  var t = Textos.t;
 
-  var MOLDE = [
-    '<header class="topo">',
-    '  <h1 class="marca">Tá <span>Ligado?</span></h1>',
-    '  <div class="placar" aria-live="polite">',
-    '    <span class="placar-rodada"></span>',
-    '    <span class="pilula pilula-acerto" title="Acertos"></span>',
-    '    <span class="pilula pilula-erro" title="Erros"></span>',
-    '  </div>',
-    '  <button class="botao botao-fantasma" data-acao="nova-pedir">Nova partida</button>',
-    '</header>',
-    '<section class="barra-sala" hidden></section>',
-    '<section class="faixa-pista" aria-live="polite"></section>',
-    '<section class="tabuleiro"><div class="grade" role="group" aria-label="Tabuleiro 5 por 5"></div></section>',
-    '<section class="painel" aria-live="polite"></section>',
-    '<div class="sobreposicao" hidden><div class="cartao-modal" role="dialog" aria-modal="true"></div></div>'
-  ].join('');
+  function molde() {
+    return [
+      '<header class="topo">',
+      '  <h1 class="marca">Tá <span>Ligado?</span></h1>',
+      '  <div class="placar" aria-live="polite">',
+      '    <span class="placar-rodada"></span>',
+      '    <span class="pilula pilula-acerto" title="' + t('jogo.acertos') + '"></span>',
+      '    <span class="pilula pilula-erro" title="' + t('jogo.erros') + '"></span>',
+      '  </div>',
+      '  <button class="botao botao-fantasma" data-acao="nova-pedir">' + t('jogo.novaPartida') + '</button>',
+      '</header>',
+      '<section class="barra-sala" hidden></section>',
+      '<section class="faixa-pista" aria-live="polite"></section>',
+      '<section class="tabuleiro"><div class="grade" role="group" aria-label="' + t('jogo.tabuleiro') + '"></div></section>',
+      '<section class="painel" aria-live="polite"></section>',
+      '<div class="sobreposicao" hidden><div class="cartao-modal" role="dialog" aria-modal="true"></div></div>'
+    ].join('');
+  }
 
   /** Conteúdo de uma carta de dica: letra grande com o número num selinho redondo. */
   function faceDica(coord) {
@@ -77,7 +79,7 @@ var UI = (function () {
     var painelAtual = null;
     var faixaAtual = null;
 
-    raiz.innerHTML = MOLDE;
+    raiz.innerHTML = molde();
     var el = {
       nova: raiz.querySelector('.topo [data-acao="nova-pedir"]'),
       barra: raiz.querySelector('.barra-sala'),
@@ -279,7 +281,7 @@ var UI = (function () {
 
     function nomeDoDador() {
       var dador = jogo.jogador(jogo.sala().dadorId);
-      return dador ? dador.nome : 'Alguém';
+      return dador ? dador.nome : t('geral.alguem');
     }
 
     /** Chegou estado novo do servidor: decide a etapa da tela deste aparelho. */
@@ -319,21 +321,21 @@ var UI = (function () {
     function renderBarra() {
       if (!online) return;
       var sala = jogo.sala();
-      var html = '<span class="barra-codigo">Sala <b>' + esc(sala.codigo) + '</b></span>' +
+      var html = '<span class="barra-codigo">' + t('jogo.sala', { codigo: esc(sala.codigo) }) + '</span>' +
         '<ul class="barra-jogadores">' + sala.jogadores.map(function (j) {
           var classes = (j.online ? '' : ' is-offline') + (j.id === sala.dadorId ? ' is-dador' : '') + (j.id === sala.euId ? ' is-eu' : '') +
             Progresso.classeMoldura(j);
           return '<li class="chip' + classes + '" data-jogador-id="' + esc(j.id) + '" title="' + esc(j.nome) +
-            (j.selo ? ', nível ' + j.selo.nivel + ' · ' + esc(j.selo.titulo) : '') +
-            (j.id === sala.dadorId ? ' está dando a pista' : '') + (j.online ? '' : ' (desconectado)') + '">' +
+            (j.selo ? t('jogo.chipNivel', { nivel: j.selo.nivel, titulo: esc(j.selo.titulo) }) : '') +
+            (j.id === sala.dadorId ? t('jogo.chipDador') : '') + (j.online ? '' : t('jogo.chipDesconectado')) + '">' +
             (j.id === sala.dadorId ? '<span aria-hidden="true">🎤</span> ' : '') + esc(j.nome) +
-            (j.id === sala.anfitriaoId ? ' <span aria-label="anfitrião">👑</span>' : '') +
+            (j.id === sala.anfitriaoId ? ' <span aria-label="' + t('jogo.chipAnfitriao') + '">👑</span>' : '') +
             (opcoes.social ? opcoes.social.iconeVoz(j) : '') + '</li>';
         }).join('') + '</ul>' +
-        (jogo.reiniciando() ? '<span class="chip chip-alerta chip-longo" role="status">' + AVISO_REINICIO + '</span>' :
-          jogo.conectado() ? '' : '<span class="chip chip-alerta">Reconectando…</span>') +
+        (jogo.reiniciando() ? '<span class="chip chip-alerta chip-longo" role="status">' + t('geral.salaReiniciando') + '</span>' :
+          jogo.conectado() ? '' : '<span class="chip chip-alerta">' + t('jogo.reconectando') + '</span>') +
         (opcoes.social ? opcoes.social.slot() : '') +
-        '<button class="botao botao-fantasma botao-pequeno" data-acao="sair-sala">Sair</button>';
+        '<button class="botao botao-fantasma botao-pequeno" data-acao="sair-sala">' + t('jogo.sair') + '</button>';
       if (barraAtual !== html) { barraAtual = html; el.barra.innerHTML = html; }
       el.barra.hidden = false;
       if (opcoes.social) opcoes.social.atualizar();
@@ -369,7 +371,7 @@ var UI = (function () {
 
     function renderPlacar(v) {
       var rodada = v.fase === Game.FASE.FIM ? v.totalCartas : v.rodada;
-      el.rodada.innerHTML = 'Carta <b>' + rodada + '</b>/' + v.totalCartas;
+      el.rodada.innerHTML = t('jogo.placarCarta', { rodada: rodada, total: v.totalCartas });
       el.acertos.textContent = '✓ ' + v.acertos;
       el.erros.textContent = '✕ ' + v.erros;
     }
@@ -380,12 +382,12 @@ var UI = (function () {
       var pista = etapa === 'resultado' && v.ultimaJogada ? v.ultimaJogada.pista
         : etapa === 'palpite' || etapa === 'assistindo' ? v.pista : null;
       if (pista) {
-        html = '<span class="faixa-rotulo">Pista</span><span class="faixa-palavra">' + esc(pista) + '</span>';
+        html = '<span class="faixa-rotulo">' + t('jogo.faixaPista') + '</span><span class="faixa-palavra">' + esc(pista) + '</span>';
       } else if (v.fase === Game.FASE.FIM) {
-        html = '<span class="faixa-rotulo">Partida encerrada</span><span class="faixa-status">' +
-          v.acertos + ' de ' + v.totalCartas + ' coordenadas</span>';
+        html = '<span class="faixa-rotulo">' + t('jogo.faixaEncerrada') + '</span><span class="faixa-status">' +
+          t('jogo.faixaCoordenadas', { acertos: v.acertos, total: v.totalCartas }) + '</span>';
       } else {
-        html = '<span class="faixa-rotulo">Carta ' + v.rodada + '</span><span class="faixa-status">Aguardando a pista…</span>';
+        html = '<span class="faixa-rotulo">' + t('jogo.faixaCarta', { rodada: v.rodada }) + '</span><span class="faixa-status">' + t('jogo.aguardandoPista') + '</span>';
       }
       // Só troca quando muda, para não reiniciar a animação da pista a cada toque.
       if (faixaAtual !== html) { faixaAtual = html; el.faixa.innerHTML = html; }
@@ -420,8 +422,8 @@ var UI = (function () {
           : estado === Game.RESULTADO.ERRO
             ? '<span class="verso-x">✕</span><span class="celula-pista">' + esc(pistas[coord] || '') + '</span>'
             : '';
-        botao.setAttribute('aria-label', coord + ', ' + p.coluna + ' e ' + p.linha +
-          (estado === Game.RESULTADO.ACERTO ? ', acerto' : estado === Game.RESULTADO.ERRO ? ', bloqueado' : ''));
+        botao.setAttribute('aria-label', t('jogo.celula', { coord: coord, coluna: p.coluna, linha: p.linha }) +
+          (estado === Game.RESULTADO.ACERTO ? t('jogo.celulaAcerto') : estado === Game.RESULTADO.ERRO ? t('jogo.celulaBloqueada') : ''));
         botao.setAttribute('aria-pressed', coord === selecionada ? 'true' : 'false');
       });
     }
@@ -457,39 +459,39 @@ var UI = (function () {
         html =
           '<div class="painel-info painel-resultado">' +
             '<div class="painel-titulo ' + (j.acertou ? 'txt-acerto' : 'txt-erro') + '">' +
-              (j.acertou ? '🎉 Tá ligado! Acertaram.' : '💥 Errou! A carta foi descartada.') + '</div>' +
-            '<div class="painel-detalhe">Era <b>' + j.coordenada + '</b>: ' + esc(j.palavraColuna) + ' × ' + esc(j.palavraLinha) +
-              (j.acertou ? '' : '. Vocês escolheram <b>' + j.palpite + '</b>.') + '</div>' +
+              (j.acertou ? t('painel.acertou') : t('painel.errou')) + '</div>' +
+            '<div class="painel-detalhe">' + t('painel.era', { coord: j.coordenada, coluna: esc(j.palavraColuna), linha: esc(j.palavraLinha) }) +
+              (j.acertou ? '' : t('painel.escolheram', { coord: j.palpite })) + '</div>' +
           '</div>' +
-          '<button class="botao botao-primario" data-acao="proxima">' + (fim ? 'Ver resultado' : 'Próxima carta') + '</button>';
+          '<button class="botao botao-primario" data-acao="proxima">' + (fim ? t('painel.verResultado') : t('painel.proximaCarta')) + '</button>';
       } else if (etapa === 'palpite') {
         var podeConfirmar = selecionada && v.celulas[selecionada] === null;
-        var dica = selecionada && !podeConfirmar ? '<div class="painel-detalhe">Esse quadrado já foi resolvido.</div>'
+        var dica = selecionada && !podeConfirmar ? '<div class="painel-detalhe">' + t('painel.jaResolvido') + '</div>'
           : avisoPainel ? '<div class="painel-detalhe txt-erro">' + esc(avisoPainel) + '</div>' : '';
         html =
           '<div class="painel-info">' +
             (ativa ? blocoPalavras(v, ativa, dica)
-                   : '<div class="painel-detalhe">Toque num quadrado para ver as duas palavras.</div>') +
+                   : '<div class="painel-detalhe">' + t('painel.toqueQuadrado') + '</div>') +
           '</div>' +
           '<button class="botao botao-primario" data-acao="confirmar-palpite"' + (podeConfirmar ? '' : ' disabled') + '>' +
-            (podeConfirmar ? 'Confirmar ' + selecionada : 'Confirmar') + '</button>';
+            (podeConfirmar ? t('painel.confirmarCoord', { coord: selecionada }) : t('painel.confirmar')) + '</button>';
       } else if (etapa === 'encerrada' || etapa === 'fim') {
         html =
           '<div class="painel-info">' + (ativa ? blocoPalavras(v, ativa)
-            : '<div class="painel-detalhe">Você acertou ' + v.acertos + ' de ' + v.totalCartas + ' coordenadas.</div>') + '</div>' +
-          (podeRecomecar() ? '<button class="botao botao-primario" data-acao="nova-confirmar">Jogar de novo</button>' : '');
+            : '<div class="painel-detalhe">' + t('painel.voceAcertou', { acertos: v.acertos, total: v.totalCartas }) + '</div>') + '</div>' +
+          (podeRecomecar() ? '<button class="botao botao-primario" data-acao="nova-confirmar">' + t('painel.jogarDeNovo') + '</button>' : '');
       } else if (etapa === 'assistindo') {
         html = '<div class="painel-info">' + (ativa ? blocoPalavras(v, ativa)
-          : '<div class="painel-detalhe">Você deu a pista <b class="pista-dada">' + esc(v.pista) + '</b>. Agora é com a turma!</div>') + '</div>';
+          : '<div class="painel-detalhe">' + t('painel.voceDeu', { pista: esc(v.pista) }) + '</div>') + '</div>';
       } else if (etapa === 'dador-oculto') {
         html = '<div class="painel-info">' + (ativa ? blocoPalavras(v, ativa)
-          : '<div class="painel-detalhe">Sua vez de dar a pista. Olhe o tabuleiro com calma.</div>') + '</div>' +
-          '<button class="botao botao-primario" data-acao="ver-coordenada">Ver minha carta</button>';
+          : '<div class="painel-detalhe">' + t('painel.suaVez') + '</div>') + '</div>' +
+          '<button class="botao botao-primario" data-acao="ver-coordenada">' + t('painel.verMinhaCarta') + '</button>';
       } else if (etapa === 'aguardando') {
         html = '<div class="painel-info">' + (ativa ? blocoPalavras(v, ativa)
-          : '<div class="painel-detalhe"><b>' + esc(nomeDoDador()) + '</b> está pensando na pista. Vá estudando o tabuleiro.</div>') + '</div>';
+          : '<div class="painel-detalhe">' + t('painel.pensando', { nome: esc(nomeDoDador()) }) + '</div>') + '</div>';
       } else {
-        html = '<div class="painel-info"><div class="painel-detalhe">Aguardando a pista…</div></div>';
+        html = '<div class="painel-info"><div class="painel-detalhe">' + t('jogo.aguardandoPista') + '</div></div>';
       }
       if (painelAtual !== html) { painelAtual = html; el.painel.innerHTML = html; }
     }
@@ -500,7 +502,7 @@ var UI = (function () {
 
     function esperandoAnfitriao() {
       var anfitriao = jogo.jogador(jogo.sala().anfitriaoId);
-      return '<p class="suave">Esperando ' + esc(anfitriao ? anfitriao.nome : 'o anfitrião') + ' começar outra partida.</p>';
+      return '<p class="suave">' + t('modal.esperandoOutra', { nome: esc(anfitriao ? anfitriao.nome : t('geral.oAnfitriao')) }) + '</p>';
     }
 
     function miniMapa(v, secreta) {
@@ -525,56 +527,56 @@ var UI = (function () {
 
       if (confirmandoNova) {
         conteudo =
-          '<h2>Começar outra partida?</h2>' +
-          '<p class="suave">O placar desta partida será perdido.</p>' +
+          '<h2>' + t('modal.novaTitulo') + '</h2>' +
+          '<p class="suave">' + t('modal.novaAviso') + '</p>' +
           '<div class="acoes">' +
-            '<button class="botao botao-fantasma" data-acao="nova-cancelar">Continuar jogando</button>' +
-            '<button class="botao botao-primario" data-acao="nova-confirmar">Nova partida</button>' +
+            '<button class="botao botao-fantasma" data-acao="nova-cancelar">' + t('modal.continuar') + '</button>' +
+            '<button class="botao botao-primario" data-acao="nova-confirmar">' + t('jogo.novaPartida') + '</button>' +
           '</div>';
       } else if (etapa === 'passar') {
         conteudo =
           '<div class="selo" aria-hidden="true">🤫</div>' +
-          '<p class="rotulo">Carta ' + v.rodada + ' de ' + v.totalCartas + '</p>' +
-          '<h2>Passe o aparelho para quem vai dar a pista</h2>' +
-          '<p class="suave">Só o dador pode olhar a próxima tela.</p>' +
-          '<div class="acoes"><button class="botao botao-primario" data-acao="ver-coordenada">Sou o dador, ver a coordenada</button></div>';
+          '<p class="rotulo">' + t('modal.passarCarta', { rodada: v.rodada, total: v.totalCartas }) + '</p>' +
+          '<h2>' + t('modal.passarTitulo') + '</h2>' +
+          '<p class="suave">' + t('modal.passarAviso') + '</p>' +
+          '<div class="acoes"><button class="botao botao-primario" data-acao="ver-coordenada">' + t('modal.souDador') + '</button></div>';
       } else if (etapa === 'dador' && v.coordenadaSecreta) {
         var p = v.palavrasSecretas;
         conteudo =
-          '<p class="rotulo">Sua coordenada secreta</p>' +
+          '<p class="rotulo">' + t('modal.coordenadaSecreta') + '</p>' +
           '<div class="dador-topo">' +
             cartaDica(v.coordenadaSecreta, 'carta-grande') + miniMapa(v, v.coordenadaSecreta) +
           '</div>' +
           '<div class="dador-palavras">' +
-            '<div class="dador-palavra"><small>Coluna ' + v.coordenadaSecreta.charAt(0) + '</small><b><span class="letreiro">' + esc(p.coluna) + '</span></b></div>' +
+            '<div class="dador-palavra"><small>' + t('modal.coluna', { id: v.coordenadaSecreta.charAt(0) }) + '</small><b><span class="letreiro">' + esc(p.coluna) + '</span></b></div>' +
             '<i>×</i>' +
-            '<div class="dador-palavra"><small>Linha ' + v.coordenadaSecreta.charAt(1) + '</small><b><span class="letreiro">' + esc(p.linha) + '</span></b></div>' +
+            '<div class="dador-palavra"><small>' + t('modal.linha', { id: v.coordenadaSecreta.charAt(1) }) + '</small><b><span class="letreiro">' + esc(p.linha) + '</span></b></div>' +
           '</div>' +
           '<form class="form-pista" autocomplete="off">' +
-            '<label for="campo-pista">Uma palavra que ligue as duas</label>' +
-            '<input id="campo-pista" name="pista" type="text" maxlength="30" autocapitalize="characters" spellcheck="false" placeholder="Sua pista">' +
+            '<label for="campo-pista">' + t('modal.pistaRotulo') + '</label>' +
+            '<input id="campo-pista" name="pista" type="text" maxlength="30" autocapitalize="characters" spellcheck="false" placeholder="' + t('modal.pistaExemplo') + '">' +
             '<div class="erro-campo" role="alert"></div>' +
             '<div class="acoes">' +
-              '<button type="button" class="botao botao-fantasma" data-acao="voltar-passar">' + (online ? 'Ver tabuleiro' : 'Esconder') + '</button>' +
-              '<button type="submit" class="botao botao-primario">Confirmar pista</button>' +
+              '<button type="button" class="botao botao-fantasma" data-acao="voltar-passar">' + (online ? t('modal.verTabuleiro') : t('modal.esconder')) + '</button>' +
+              '<button type="submit" class="botao botao-primario">' + t('modal.confirmarPista') + '</button>' +
             '</div>' +
           '</form>';
       } else if (etapa === 'fim') {
         var perfeito = v.vitoriaMaxima;
         conteudo =
           '<div class="selo selo-fim" aria-hidden="true">' + (perfeito ? '🏆' : '⭐') + '</div>' +
-          '<p class="rotulo">' + (perfeito ? 'Vitória máxima' : 'Fim do baralho') + '</p>' +
+          '<p class="rotulo">' + (perfeito ? t('modal.vitoriaMaxima') : t('modal.fimBaralho')) + '</p>' +
           '<div class="placar-final ' + (perfeito ? 'txt-acerto' : '') + '">' + v.acertos + '<small>/' + v.totalCartas + '</small></div>' +
           '<h2>' + (perfeito
-            ? 'Vocês posicionaram as 25 cartas sem nenhum erro!'
-            : 'Você acertou ' + v.acertos + ' de ' + v.totalCartas + ' coordenadas!') + '</h2>' +
+            ? t('modal.perfeito')
+            : t('modal.voceAcertou', { acertos: v.acertos, total: v.totalCartas })) + '</h2>' +
           Progresso.blocoFim(progresso) +
           '<div class="acoes">' +
-            '<button class="botao botao-fantasma" data-acao="fechar-fim">Ver tabuleiro</button>' +
-            (podeRecomecar() ? '<button class="botao botao-primario" data-acao="nova-confirmar">Jogar de novo</button>' : '') +
+            '<button class="botao botao-fantasma" data-acao="fechar-fim">' + t('modal.verTabuleiro') + '</button>' +
+            (podeRecomecar() ? '<button class="botao botao-primario" data-acao="nova-confirmar">' + t('painel.jogarDeNovo') + '</button>' : '') +
           '</div>' +
           (podeRecomecar() ? '' : esperandoAnfitriao()) +
-          (progresso ? '<button type="button" class="botao botao-fantasma botao-pequeno fim-perfil" data-acao="perfil">Ver meu perfil</button>' : '');
+          (progresso ? '<button type="button" class="botao botao-fantasma botao-pequeno fim-perfil" data-acao="perfil">' + t('modal.verPerfil') + '</button>' : '');
       }
 
       if (!conteudo) {
