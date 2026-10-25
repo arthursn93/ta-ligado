@@ -8,11 +8,20 @@
   'use strict';
   Theme.aplicar(Theme.salva());
   var raiz = document.getElementById('app');
+  var som = Som.criar();
+  // O navegador só deixa o som começar depois de um toque ou tecla.
+  document.addEventListener('pointerdown', som.liberar);
+  document.addEventListener('keydown', som.liberar);
+  document.addEventListener('click', function (ev) {
+    if (!ev.target.closest('[data-som]')) return;
+    var ligado = som.alternar();
+    Array.prototype.forEach.call(document.querySelectorAll('[data-som]'), function (b) { b.outerHTML = Som.botao(ligado); });
+  });
   var ESPERA_MAXIMA_MS = 60 * 1000; // o servidor gratuito pode levar quase 1 minuto para acordar
 
   function jogarLocal() {
     raiz.innerHTML = '';
-    UI.criar(raiz, Game.criar());
+    UI.criar(raiz, Game.criar(), { som: som });
   }
 
   function telaSimples(miolo) {
@@ -61,11 +70,13 @@
     }
     Lobby.criar(raiz, rede, {
       social: social,
+      som: som,
       aoJogarLocal: function () { desistir(); jogarLocal(); },
       aoComecar: function () {
         UI.criar(raiz, rede, {
           online: true,
           social: social,
+          som: som,
           aoSair: function () {
             rede.sair().then(function () { voltarAoInicio(); });
           },
