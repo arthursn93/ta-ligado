@@ -47,6 +47,7 @@ var Lobby = (function () {
       '    <div class="erro-campo" role="alert"></div>',
       '  </form>',
       '  <div class="lobby-extras">',
+      '    <button type="button" class="botao botao-fantasma" data-lobby="tutorial">' + t('tutorial.botao') + '</button>',
       '    <button type="button" class="botao botao-fantasma" data-lobby="perfil">' + t('geral.meuPerfil') + '</button>',
       '    <button type="button" class="botao botao-fantasma" data-lobby="local">' + t('geral.jogarLocal') + '</button>',
       '  </div>',
@@ -72,6 +73,7 @@ var Lobby = (function () {
       '    <div class="erro-campo" role="alert"></div>',
       '  </section>',
       '  <div class="lobby-extras">',
+      '    <button type="button" class="botao botao-fantasma" data-lobby="tutorial">' + t('tutorial.botao') + '</button>',
       '    <button type="button" class="botao botao-fantasma" data-lobby="perfil">' + t('geral.meuPerfil') + '</button>',
       '    <button type="button" class="botao botao-fantasma" data-lobby="sair">' + t('lobby.sair') + '</button>',
       '  </div>',
@@ -84,6 +86,7 @@ var Lobby = (function () {
     var ocupado = false;
     var acoesAtuais = null;
     var onlineAntes = -1; // para tocar um som quando alguém entra na sala de espera
+    var tutorialAberto = null;
 
     function render() {
       var sala = rede.sala();
@@ -101,6 +104,8 @@ var Lobby = (function () {
           raiz.querySelector('.lobby-aviso').hidden = !(rede.salaEncerrada() || avisoDaUrl());
           var foco = rede.nomeSalvo() ? (codigoDaUrl() ? '[data-lobby="entrar"]' : '[name="codigo"]') : '[name="nome"]';
           raiz.querySelector(foco).focus();
+          // Primeira visita sem convite: o "Como jogar" abre sozinho, uma vez.
+          if (Tutorial.deveAbrir()) abrirTutorial();
         } else if (tela === 'sala') {
           raiz.innerHTML = moldeSala();
           if (opcoes.social) raiz.querySelector('.lobby-social').innerHTML = opcoes.social.slot();
@@ -189,11 +194,19 @@ var Lobby = (function () {
         case 'perfil':
           Progresso.abrir(rede);
           break;
+        case 'tutorial':
+          abrirTutorial();
+          break;
         case 'local':
           desligar();
           opcoes.aoJogarLocal();
           break;
       }
+    }
+
+    function abrirTutorial() {
+      if (tutorialAberto) return;
+      tutorialAberto = Tutorial.abrir({ som: opcoes.som, aoFechar: function () { tutorialAberto = null; } });
     }
 
     function copiarConvite(codigo) {
@@ -235,6 +248,9 @@ var Lobby = (function () {
     }
 
     function comecar() {
+      // Quem já jogou uma partida não precisa que o tutorial abra sozinho depois.
+      Tutorial.marcarVisto();
+      if (tutorialAberto) tutorialAberto.fechar();
       desligar();
       raiz.innerHTML = '';
       opcoes.aoComecar();

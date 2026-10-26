@@ -1123,3 +1123,64 @@ button { font: inherit; color: inherit; }
 /* Botão de som (ligar/desligar), no topo do jogo e na sala de espera. */
 .botao-som { flex: none; padding-left: 10px; padding-right: 10px; font-size: 18px; line-height: 1; }
 .topo .botao-som { margin-left: auto; padding-left: 10px; padding-right: 10px; }
+
+/* ---------- Tutorial (Como jogar): tabuleiro de exemplo 3×3 dentro de uma janela ---------- */
+
+.tutorial-sobreposicao { z-index: 16; }
+.modal-tutorial { max-width: 440px; }
+.modal-tutorial h2:focus { outline: none; }
+.tut-topo { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: var(--toque); }
+.tut-topo .rotulo { text-align: left; }
+.tut-pontos { display: flex; justify-content: center; gap: 6px; margin: 10px 0 4px; }
+.tut-pontos span { width: 28px; height: 6px; border-radius: 3px; background: var(--linha); }
+.tut-pontos span.is-feito { background: var(--primaria); }
+
+.tut-grade {
+  display: grid;
+  grid-template-columns: auto repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 16px 0 6px;
+}
+.tut-cab { display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; }
+.tut-col { flex-direction: column; justify-content: flex-end; }
+.tut-lin { justify-content: flex-end; }
+.tut-id {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--superficie-suave);
+  color: var(--primaria);
+  font-weight: 900;
+  line-height: 1;
+}
+.tut-cab .etiqueta { padding: 2px 5px; font-size: 12px; text-transform: uppercase; }
+.tut-grade .celula { border-radius: 10px; }
+.tut-grade .celula.is-acerto .dica-letra { font-size: 28px; }
+.tut-grade .celula.is-acerto .dica-num { font-size: 10px; }
+
+.tut-retorno { min-height: 64px; margin-top: 10px; display: grid; place-items: center; gap: 6px; }
+.tut-retorno .erro-campo { margin: 0; }
+.tut-ok { margin: 0; font-size: 16px; font-weight: 800; color: var(--acerto); }
+.tut-retorno .painel-palavras span { text-transform: uppercase; }
+
+.tut-secreta { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 18px 0 14px; }
+.tut-carta { width: 64px; height: 64px; flex: none; transform: rotate(-4deg); }
+.tut-carta .dica-letra { font-size: 36px; }
+.tut-carta .dica-num { font-size: 11px; }
+.tut-pistas { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.tut-pista { min-height: var(--toque); padding: 8px 14px; font-size: 15px; }
+.tut-pista.is-certa:disabled { opacity: 1; background: var(--sucesso); color: var(--tinta); box-shadow: inset 0 0 0 2px var(--acerto); }
+.tut-pista.is-recusada { box-shadow: inset 0 0 0 2px var(--erro); color: var(--erro); }
+
+.tut-faixa { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 10px; }
+.tut-faixa .faixa-palavra { font-size: 28px; text-transform: uppercase; }
+.tut-meta { margin-top: 10px; font-weight: 800; color: var(--tinta); }
+
+@media (max-width: 360px) {
+  .modal-tutorial { padding: 22px 14px 18px; }
+  .tut-cab .etiqueta { font-size: 10px; padding: 2px 3px; }
+  .tut-id { width: 24px; height: 24px; }
+}

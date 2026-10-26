@@ -12,7 +12,7 @@ const ARQUIVOS = ['js', 'server'].flatMap((pasta) => fs.readdirSync(path.join(RA
   .map((nome) => path.join(pasta, nome)));
 const GRUPOS = [...new Set(Object.keys(TextosPt).map((chave) => chave.split('.')[0]))];
 // Qualquer texto entre aspas no formato "grupo.nome" com um grupo do arquivo de textos é uma chave.
-const PADRAO = new RegExp("'((?:" + GRUPOS.join('|') + ")\\.[A-Za-z]+)'", 'g');
+const PADRAO = new RegExp("'((?:" + GRUPOS.join('|') + ")\\.[A-Za-z0-9]+)'", 'g');
 
 function chavesUsadas() {
   const usadas = new Map();
