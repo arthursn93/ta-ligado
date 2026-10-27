@@ -1,7 +1,8 @@
 /**
  * WordBank — pacotes de palavras e o que cada palavra "já significa".
  *
- * Cada pacote é { id, nome, palavras[], equivalentes{} }.
+ * Cada pacote é { id, nome, idioma, palavras[], equivalentes{} }.
+ *   idioma       → 'pt' (padrão), 'en' ou 'es': decide a regra de "mesma família" das pistas.
  *   palavras     → só palavras simples (sem hífen nem espaço); compostas são descartadas no registro.
  *   equivalentes → para cada palavra, sinônimos diretos, traduções e variações óbvias.
  *                  Uma pista igual a um equivalente não acrescenta nada e é recusada pelo Game.
@@ -45,7 +46,9 @@ var WordBank = (function () {
       });
     });
 
-    pacotes[pacote.id] = { id: pacote.id, nome: pacote.nome || pacote.id, palavras: unicas, indice: indice };
+    pacotes[pacote.id] = {
+      id: pacote.id, nome: pacote.nome || pacote.id, idioma: pacote.idioma || 'pt', palavras: unicas, indice: indice
+    };
     return pacotes[pacote.id];
   }
 
@@ -57,14 +60,20 @@ var WordBank = (function () {
 
   function listar() {
     return Object.keys(pacotes).map(function (id) {
-      return { id: id, nome: pacotes[id].nome, total: pacotes[id].palavras.length };
+      return { id: id, nome: pacotes[id].nome, idioma: pacotes[id].idioma, total: pacotes[id].palavras.length };
     });
+  }
+
+  /** Idioma do pacote ('pt', 'en' ou 'es'). */
+  function idioma(idPacote) {
+    return obter(idPacote || 'classico').idioma;
   }
 
   /** As duas palavras querem dizer a mesma coisa? (mesma família, sinônimo direto ou tradução) */
   function equivalentes(a, b, idPacote) {
-    if (UtilRef.mesmaFamilia(a, b)) return true;
-    var indice = obter(idPacote || 'classico').indice;
+    var pacote = obter(idPacote || 'classico');
+    if (UtilRef.mesmaFamilia(a, b, pacote.idioma)) return true;
+    var indice = pacote.indice;
     var na = UtilRef.normalizar(a);
     var nb = UtilRef.normalizar(b);
     return !!((indice[na] && indice[na][nb]) || (indice[nb] && indice[nb][na]));
@@ -308,7 +317,213 @@ var WordBank = (function () {
     }
   });
 
-  return { registrar: registrar, obter: obter, listar: listar, sortear: sortear, equivalentes: equivalentes, ehSimples: ehSimples };
+  // O Clássico em inglês e em espanhol: as mesmas 169 palavras, na mesma ordem.
+  // Ainda não aparecem no jogo; a sala passa a escolher o idioma das palavras numa próxima etapa.
+  // Equivalentes de cada palavra: os sinônimos no próprio idioma, a palavra em português e a do outro idioma.
+  // [português, inglês, sinônimos em inglês, espanhol, sinônimos em espanhol]
+  var TRADUCOES = [
+    // Natureza
+    ['mar', 'sea', ['ocean'], 'mar', ['océano']],
+    ['montanha', 'mountain', ['mount', 'peak'], 'montaña', ['monte', 'cerro']],
+    ['floresta', 'forest', ['woods', 'jungle'], 'bosque', ['selva', 'floresta']],
+    ['deserto', 'desert', [], 'desierto', []],
+    ['rio', 'river', ['stream', 'creek'], 'río', ['arroyo']],
+    ['vulcão', 'volcano', [], 'volcán', []],
+    ['ilha', 'island', ['isle'], 'isla', ['islote']],
+    ['chuva', 'rain', ['drizzle', 'shower', 'downpour'], 'lluvia', ['llovizna', 'aguacero']],
+    ['neve', 'snow', ['blizzard'], 'nieve', ['nevada', 'ventisca']],
+    ['trovão', 'thunder', [], 'trueno', []],
+    ['sol', 'sun', ['solar'], 'sol', ['solar']],
+    ['lua', 'moon', ['lunar'], 'luna', ['lunar']],
+    ['estrela', 'star', ['stellar'], 'estrella', ['astro']],
+    ['nuvem', 'cloud', [], 'nube', []],
+    ['vento', 'wind', ['breeze', 'gust'], 'viento', ['brisa', 'ventarrón']],
+    ['areia', 'sand', [], 'arena', []],
+    ['pedra', 'stone', ['rock', 'pebble'], 'piedra', ['roca', 'guijarro']],
+    ['raiz', 'root', [], 'raíz', []],
+    ['flor', 'flower', ['blossom', 'bloom'], 'flor', []],
+    ['folha', 'leaf', ['foliage'], 'hoja', ['follaje']],
+    ['gelo', 'ice', [], 'hielo', []],
+    ['fogo', 'fire', ['flame', 'blaze', 'bonfire'], 'fuego', ['llama', 'hoguera', 'fogata']],
+    ['cachoeira', 'waterfall', ['falls', 'cascade'], 'cascada', ['catarata']],
+    ['caverna', 'cave', ['cavern', 'grotto'], 'cueva', ['caverna', 'gruta']],
+    ['cometa', 'comet', [], 'cometa', []],
+    ['lago', 'lake', ['pond', 'lagoon'], 'lago', ['laguna', 'estanque']],
+    ['onda', 'wave', ['surf'], 'ola', ['oleaje']],
+    ['neblina', 'fog', ['mist', 'haze'], 'niebla', ['bruma', 'neblina']],
+    // Animais
+    ['gato', 'cat', ['kitten', 'kitty', 'feline'], 'gato', ['gatito', 'felino', 'minino']],
+    ['cachorro', 'dog', ['puppy', 'hound', 'canine'], 'perro', ['can', 'cachorro', 'canino']],
+    ['leão', 'lion', ['lioness'], 'león', ['leona']],
+    ['baleia', 'whale', [], 'ballena', []],
+    ['coruja', 'owl', [], 'búho', ['lechuza']],
+    ['cobra', 'snake', ['serpent', 'viper'], 'serpiente', ['culebra', 'víbora']],
+    ['abelha', 'bee', [], 'abeja', []],
+    ['formiga', 'ant', [], 'hormiga', []],
+    ['tubarão', 'shark', [], 'tiburón', []],
+    ['cavalo', 'horse', ['pony', 'stallion', 'mare'], 'caballo', ['yegua', 'potro', 'equino']],
+    ['macaco', 'monkey', ['ape', 'primate'], 'mono', ['simio', 'primate', 'chango']],
+    ['pinguim', 'penguin', [], 'pingüino', []],
+    ['aranha', 'spider', [], 'araña', []],
+    ['borboleta', 'butterfly', [], 'mariposa', []],
+    ['tartaruga', 'turtle', ['tortoise'], 'tortuga', []],
+    ['polvo', 'octopus', [], 'pulpo', []],
+    ['lobo', 'wolf', [], 'lobo', ['loba']],
+    ['galo', 'rooster', ['hen', 'chicken'], 'gallo', ['gallina']],
+    ['elefante', 'elephant', [], 'elefante', []],
+    ['morcego', 'bat', [], 'murciélago', []],
+    // Casa e objetos
+    ['cadeira', 'chair', ['seat', 'stool'], 'silla', ['asiento', 'taburete']],
+    ['janela', 'window', [], 'ventana', []],
+    ['espelho', 'mirror', [], 'espejo', []],
+    ['chave', 'key', [], 'llave', []],
+    ['relógio', 'clock', ['watch'], 'reloj', []],
+    ['vela', 'candle', [], 'vela', []],
+    ['tesoura', 'scissors', [], 'tijeras', ['tijera']],
+    ['livro', 'book', [], 'libro', []],
+    ['garrafa', 'bottle', [], 'botella', []],
+    ['travesseiro', 'pillow', ['cushion'], 'almohada', ['cojín']],
+    ['escada', 'ladder', ['stairs', 'staircase', 'step'], 'escalera', ['escalón', 'peldaño']],
+    ['porta', 'door', ['gate'], 'puerta', ['portón']],
+    ['lâmpada', 'lamp', ['bulb'], 'lámpara', ['bombilla', 'foco']],
+    ['mochila', 'backpack', ['rucksack', 'knapsack'], 'mochila', []],
+    ['chapéu', 'hat', ['cap'], 'sombrero', ['gorro', 'gorra']],
+    ['agulha', 'needle', [], 'aguja', []],
+    ['martelo', 'hammer', ['mallet'], 'martillo', ['mazo']],
+    ['balde', 'bucket', ['pail'], 'balde', ['cubo', 'cubeta']],
+    ['caixa', 'box', ['crate', 'carton'], 'caja', ['cajón']],
+    ['telefone', 'phone', ['telephone', 'cellphone', 'mobile'], 'teléfono', ['celular', 'móvil']],
+    ['ímã', 'magnet', ['magnetic'], 'imán', ['magnético']],
+    ['corda', 'rope', ['cord', 'string'], 'cuerda', ['soga', 'cordón']],
+    ['moeda', 'coin', [], 'moneda', []],
+    ['carta', 'letter', [], 'carta', []],
+    ['mapa', 'map', [], 'mapa', []],
+    ['bússola', 'compass', [], 'brújula', []],
+    ['lupa', 'magnifier', [], 'lupa', []],
+    ['sino', 'bell', [], 'campana', ['campanilla', 'cascabel']],
+    // Comida
+    ['pão', 'bread', ['loaf'], 'pan', ['bollo']],
+    ['queijo', 'cheese', [], 'queso', []],
+    ['chocolate', 'chocolate', ['cocoa', 'cacao'], 'chocolate', ['cacao']],
+    ['café', 'coffee', ['espresso'], 'café', []],
+    ['pimenta', 'pepper', ['chili'], 'pimienta', ['chile', 'ají']],
+    ['mel', 'honey', [], 'miel', []],
+    ['limão', 'lemon', ['lime'], 'limón', ['lima']],
+    ['pipoca', 'popcorn', [], 'palomitas', ['pochoclo', 'cotufas']],
+    ['sorvete', 'popsicle', ['gelato'], 'helado', ['paleta', 'polo']],
+    ['bolo', 'cake', ['pie'], 'pastel', ['tarta', 'torta', 'bizcocho']],
+    ['sal', 'salt', ['salty'], 'sal', ['salado']],
+    ['açúcar', 'sugar', [], 'azúcar', []],
+    ['ovo', 'egg', [], 'huevo', []],
+    ['banana', 'banana', [], 'plátano', ['banana']],
+    ['abacaxi', 'pineapple', [], 'piña', ['ananá']],
+    ['feijão', 'bean', [], 'frijol', ['judía', 'poroto', 'habichuela']],
+    ['leite', 'milk', [], 'leche', []],
+    ['uva', 'grape', [], 'uva', []],
+    // Lugares
+    ['escola', 'school', ['college'], 'escuela', ['colegio']],
+    ['hospital', 'hospital', ['clinic'], 'hospital', ['clínica']],
+    ['praia', 'beach', ['shore', 'coast', 'seaside'], 'playa', ['costa', 'litoral']],
+    ['castelo', 'castle', ['fortress', 'fort'], 'castillo', ['fortaleza']],
+    ['igreja', 'church', ['chapel', 'temple'], 'iglesia', ['capilla', 'templo']],
+    ['circo', 'circus', [], 'circo', []],
+    ['museu', 'museum', [], 'museo', []],
+    ['prisão', 'prison', ['jail'], 'cárcel', ['prisión', 'presidio']],
+    ['mercado', 'market', ['supermarket'], 'mercado', ['supermercado', 'feria']],
+    ['farol', 'lighthouse', [], 'faro', []],
+    ['estádio', 'stadium', ['arena'], 'estadio', []],
+    ['biblioteca', 'library', [], 'biblioteca', []],
+    ['aeroporto', 'airport', [], 'aeropuerto', []],
+    ['cemitério', 'cemetery', ['graveyard'], 'cementerio', ['camposanto']],
+    ['teatro', 'theater', ['theatre'], 'teatro', []],
+    ['fazenda', 'farm', ['ranch'], 'granja', ['finca', 'rancho', 'hacienda']],
+    ['ponte', 'bridge', [], 'puente', []],
+    ['túnel', 'tunnel', [], 'túnel', []],
+    // Corpo
+    ['olho', 'eye', ['ocular'], 'ojo', ['ocular']],
+    ['coração', 'heart', ['cardiac'], 'corazón', ['cardíaco']],
+    ['mão', 'hand', ['manual'], 'mano', ['manual']],
+    ['osso', 'bone', [], 'hueso', []],
+    ['cabelo', 'hair', [], 'cabello', ['pelo', 'melena']],
+    ['dente', 'tooth', ['teeth', 'dental'], 'diente', ['dental']],
+    ['sangue', 'blood', [], 'sangre', ['sanguíneo']],
+    ['pulmão', 'lung', [], 'pulmón', ['pulmonar']],
+    ['joelho', 'knee', [], 'rodilla', []],
+    ['sombra', 'shadow', ['shade'], 'sombra', []],
+    // Pessoas e ofícios
+    ['rei', 'king', ['monarch', 'ruler', 'majesty'], 'rey', ['monarca', 'soberano', 'majestad']],
+    ['pirata', 'pirate', ['buccaneer', 'corsair'], 'pirata', ['corsario', 'bucanero']],
+    ['palhaço', 'clown', ['jester'], 'payaso', ['bufón']],
+    ['médico', 'doctor', ['physician', 'medic'], 'médico', ['doctor']],
+    ['bruxa', 'witch', ['wizard', 'sorcerer', 'sorceress'], 'bruja', ['brujo', 'hechicera']],
+    ['astronauta', 'astronaut', ['cosmonaut', 'spaceman'], 'astronauta', ['cosmonauta']],
+    ['detetive', 'detective', ['investigator', 'sleuth'], 'detective', ['investigador']],
+    ['soldado', 'soldier', ['trooper'], 'soldado', ['militar']],
+    ['chef', 'chef', ['cook'], 'chef', ['cocinero', 'cocinera']],
+    ['bebê', 'baby', ['infant', 'newborn'], 'bebé', ['nene']],
+    ['fantasma', 'ghost', ['spirit', 'phantom', 'spook'], 'fantasma', ['espíritu', 'espectro', 'aparición']],
+    ['robô', 'robot', ['android', 'droid'], 'robot', ['androide']],
+    ['ninja', 'ninja', ['shinobi'], 'ninja', ['shinobi']],
+    ['sereia', 'mermaid', ['siren'], 'sirena', []],
+    ['vampiro', 'vampire', [], 'vampiro', []],
+    ['professor', 'teacher', ['professor', 'tutor'], 'profesor', ['maestro', 'docente']],
+    // Ideias e coisas abstratas
+    ['sonho', 'dream', [], 'sueño', []],
+    ['medo', 'fear', ['fright', 'dread', 'terror'], 'miedo', ['temor', 'pavor', 'terror']],
+    ['segredo', 'secret', [], 'secreto', []],
+    ['festa', 'party', ['celebration', 'feast'], 'fiesta', ['celebración', 'festejo']],
+    ['guerra', 'war', ['warfare'], 'guerra', ['conflicto']],
+    ['música', 'music', ['song', 'tune'], 'música', ['canción']],
+    ['silêncio', 'silence', ['quiet', 'hush'], 'silencio', ['quietud']],
+    ['tempo', 'time', [], 'tiempo', []],
+    ['sorte', 'luck', ['fortune'], 'suerte', ['fortuna']],
+    ['memória', 'memory', ['remembrance'], 'memoria', ['recuerdo']],
+    ['dinheiro', 'money', ['cash'], 'dinero', ['plata', 'efectivo']],
+    ['amor', 'love', ['passion'], 'amor', ['pasión', 'cariño']],
+    ['viagem', 'trip', ['journey', 'travel', 'voyage'], 'viaje', ['travesía']],
+    ['jogo', 'game', ['match'], 'juego', ['partida']],
+    ['perigo', 'danger', ['risk', 'threat', 'peril'], 'peligro', ['riesgo', 'amenaza']],
+    ['mentira', 'lie', ['falsehood', 'fib'], 'mentira', ['engaño', 'falsedad']],
+    // Transporte e tecnologia
+    ['avião', 'plane', ['airplane', 'aircraft', 'jet'], 'avión', ['aeronave', 'jet']],
+    ['trem', 'train', ['locomotive'], 'tren', ['locomotora']],
+    ['navio', 'ship', ['boat', 'vessel'], 'barco', ['buque', 'navío', 'nave']],
+    ['bicicleta', 'bicycle', ['bike', 'cycle'], 'bicicleta', ['bici']],
+    ['foguete', 'rocket', [], 'cohete', []],
+    ['carro', 'car', ['automobile', 'auto', 'vehicle'], 'coche', ['carro', 'auto', 'automóvil', 'vehículo']],
+    ['balão', 'balloon', [], 'globo', []],
+    ['satélite', 'satellite', [], 'satélite', []],
+    ['computador', 'computer', ['laptop', 'pc'], 'computadora', ['ordenador', 'computador', 'portátil']],
+    ['câmera', 'camera', [], 'cámara', []],
+    ['bateria', 'battery', [], 'batería', ['pila']],
+    ['antena', 'antenna', ['aerial'], 'antena', []],
+    ['radar', 'radar', [], 'radar', []],
+    ['motor', 'engine', ['motor'], 'motor', []],
+    ['roda', 'wheel', [], 'rueda', []]
+  ];
+
+  function classicoEm(idioma, nome) {
+    var col = idioma === 'en' ? 1 : 3;
+    var outra = idioma === 'en' ? 3 : 1;
+    var equivalentes = {};
+    TRADUCOES.forEach(function (linha) {
+      equivalentes[linha[col]] = linha[col + 1].concat([linha[0], linha[outra]]);
+    });
+    registrar({
+      id: 'classico-' + idioma,
+      nome: nome,
+      idioma: idioma,
+      palavras: TRADUCOES.map(function (linha) { return linha[col]; }),
+      equivalentes: equivalentes
+    });
+  }
+  classicoEm('en', 'Classic');
+  classicoEm('es', 'Clásico');
+
+  return {
+    registrar: registrar, obter: obter, listar: listar, idioma: idioma, sortear: sortear,
+    equivalentes: equivalentes, ehSimples: ehSimples, TRADUCOES: TRADUCOES
+  };
 })();
 
 if (typeof module !== 'undefined' && module.exports) module.exports = WordBank;

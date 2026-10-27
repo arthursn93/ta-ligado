@@ -119,7 +119,7 @@ var Game = (function () {
       }
 
       // Cada pista vale uma vez por partida, incluindo plurais e variações.
-      var repetida = s.historico.filter(function (j) { return UtilRef.mesmaFamilia(j.pista, limpa); })[0];
+      var repetida = s.historico.filter(function (j) { return UtilRef.mesmaFamilia(j.pista, limpa, WordBankRef.idioma(s.pacote)); })[0];
       if (repetida) return { chave: 'pista.repetida', valores: { pista: repetida.pista.toUpperCase() } };
       return null;
     }
