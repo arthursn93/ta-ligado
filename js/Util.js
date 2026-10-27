@@ -27,19 +27,51 @@ var Util = (function () {
       .replace(/[̀-ͯ]/g, '');
   }
 
-  var SUFIXOS = [
-    '', 'a', 'e', 'o', 's', 'as', 'es', 'os', 'is', 'ais', 'eis', 'oes', 'aes', 'ao', 'oa', 'ona', 'zao', 'zona',
-    'inho', 'inha', 'inhos', 'inhas', 'zinho', 'zinha', 'ito', 'ita', 'ete', 'eta',
-    'al', 'ar', 'onar', 'ario', 'aria', 'eiro', 'eira', 'eiros', 'eiras', 'ico', 'ica', 'oso', 'osa',
-    'ineo', 'inea', 'ista', 'ismo', 'ada', 'ado', 'agem', 'ento', 'udo', 'uda', 'ear', 'ecer', 'izar'
-  ];
+  // Regras de "mesma família" por idioma (sempre sobre palavras normalizadas, sem acento).
+  //   flexao  → plural, diminutivo e aumentativo, colados na palavra ou no radical.
+  //   sufixos → derivações aceitas depois de uma raiz comum de pelo menos 4 letras.
+  //   dobra   → (inglês) flexões que dobram a última consoante: sun/sunny, run/running.
+  var REGRAS = {
+    pt: {
+      vogalFinal: /[aeo]$/,
+      flexao: ['s', 'es', 'inho', 'inha', 'inhos', 'inhas', 'zinho', 'zinha', 'zao', 'zona', 'ao', 'ona', 'oes'],
+      sufixos: [
+        '', 'a', 'e', 'o', 's', 'as', 'es', 'os', 'is', 'ais', 'eis', 'oes', 'aes', 'ao', 'oa', 'ona', 'zao', 'zona',
+        'inho', 'inha', 'inhos', 'inhas', 'zinho', 'zinha', 'ito', 'ita', 'ete', 'eta',
+        'al', 'ar', 'onar', 'ario', 'aria', 'eiro', 'eira', 'eiros', 'eiras', 'ico', 'ica', 'oso', 'osa',
+        'ineo', 'inea', 'ista', 'ismo', 'ada', 'ado', 'agem', 'ento', 'udo', 'uda', 'ear', 'ecer', 'izar'
+      ],
+      dobra: []
+    },
+    en: {
+      vogalFinal: /[ey]$/,
+      flexao: ['s', 'es', 'ies', 'ing', 'ings', 'ed', 'er', 'ers', 'est', 'ier', 'iest', 'y', 'ish', 'ly'],
+      sufixos: [
+        '', 'e', 's', 'es', 'ies', 'y', 'ed', 'er', 'ers', 'ing', 'ings', 'ish', 'ful', 'less', 'ness', 'ly', 'ic', 'al',
+        'ous', 'ity', 'ist', 'ism', 'ian', 'ment', 'en', 'ier', 'iest', 'est', 'ery', 'ary', 'like', 'dom', 'ship', 'hood'
+      ],
+      dobra: ['y', 'ing', 'ings', 'ed', 'er', 'ers', 'ier', 'iest', 'est']
+    },
+    es: {
+      vogalFinal: /[aeo]$/,
+      flexao: ['s', 'es', 'ito', 'ita', 'itos', 'itas', 'cito', 'cita', 'citos', 'citas', 'illo', 'illa', 'on', 'ona', 'ones', 'onas', 'azo', 'aza'],
+      sufixos: [
+        '', 'a', 'e', 'o', 's', 'as', 'es', 'os', 'ito', 'ita', 'itos', 'itas', 'illo', 'illa', 'on', 'ona', 'ones', 'azo', 'aza',
+        'al', 'ales', 'ar', 'ero', 'era', 'eros', 'eras', 'eria', 'ico', 'ica', 'oso', 'osa', 'ista', 'ismo', 'ada', 'ado',
+        'aje', 'ento', 'udo', 'uda', 'ear', 'ecer', 'izar', 'ino', 'ina', 'eo', 'ea', 'dor', 'dora', 'cion', 'eza'
+      ],
+      dobra: []
+    }
+  };
 
   /**
    * As duas palavras são da mesma família? (igual, plural, diminutivo, mesma raiz)
-   * Ex.: ritual/rituais, sangue/sanguíneo, pulmão/pulmonar, lobo/lobinho.
+   * Ex.: ritual/rituais, sangue/sanguíneo, pulmão/pulmonar, lobo/lobinho; em inglês cat/cats, sun/sunny;
+   * em espanhol luz/luces, gato/gatito. `idioma` é 'pt' (padrão), 'en' ou 'es'.
    * Palavras de até 3 letras só casam com plurais e diminutivos, para "mar" não barrar "marte".
    */
-  function mesmaFamilia(a, b) {
+  function mesmaFamilia(a, b, idioma) {
+    var regra = REGRAS[idioma] || REGRAS.pt;
     var x = normalizar(a);
     var y = normalizar(b);
     if (!x || !y) return false;
@@ -47,9 +79,11 @@ var Util = (function () {
     var curta = x.length <= y.length ? x : y;
     var longa = curta === x ? y : x;
     // Plural, diminutivo e aumentativo: gato/gatinho, mar/mares, lobo/lobinhos, mão/mãozona.
-    var radical = /[aeo]$/.test(curta) && curta.length > 3 ? curta.slice(0, -1) : curta;
-    var flexao = ['s', 'es', 'inho', 'inha', 'inhos', 'inhas', 'zinho', 'zinha', 'zao', 'zona', 'ao', 'ona', 'oes'];
-    if (flexao.some(function (fim) { return longa === curta + fim || longa === radical + fim; })) return true;
+    var radical = regra.vogalFinal.test(curta) && curta.length > 3 ? curta.slice(0, -1) : curta;
+    if (regra.flexao.some(function (fim) { return longa === curta + fim || longa === radical + fim; })) return true;
+    var ultima = curta.charAt(curta.length - 1);
+    if (regra.dobra.some(function (fim) { return longa === curta + ultima + fim; })) return true;
+    if (idioma === 'es' && ultima === 'z' && longa === curta.slice(0, -1) + 'ces') return true;
     if (curta.length <= 3) return false;
     var prefixo = 0;
     while (prefixo < curta.length && curta.charAt(prefixo) === longa.charAt(prefixo)) prefixo++;
@@ -57,7 +91,7 @@ var Util = (function () {
     // Raiz comum só conta se o resto da palavra maior for um sufixo de derivação
     // (sangu+íneo, caval+eiro, ritua+is), para "flor" não barrar "floresta".
     var resto = longa.slice(prefixo);
-    return SUFIXOS.indexOf(resto) !== -1;
+    return regra.sufixos.indexOf(resto) !== -1;
   }
 
   /** Gerador determinístico (mulberry32), útil em testes e para reproduzir partidas. */
