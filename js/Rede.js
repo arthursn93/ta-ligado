@@ -127,7 +127,8 @@ var Rede = (function () {
         return null;
       },
       criarSala: function (nome) {
-        return pedir('criar', { nome: nome, token: token }).then(function (r) {
+        // As palavras da sala começam no idioma deste aparelho.
+        return pedir('criar', { nome: nome, token: token, idioma: Textos.idioma() }).then(function (r) {
           if (r.ok) lembrarSala(r.codigo, nome);
           return r;
         });
@@ -139,6 +140,7 @@ var Rede = (function () {
         });
       },
       iniciar: function () { return pedir('iniciar'); },
+      idiomaDasPalavras: function (idioma) { return pedir('sala:idioma', { idioma: idioma }); },
 
       // Progressão: o servidor calcula tudo; aqui só pede e mostra.
       /** XP da partida que acabou de terminar, ou null. */

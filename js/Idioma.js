@@ -62,17 +62,22 @@ var Idioma = (function () {
     return atual === 'pt' ? '' : '&idioma=' + atual;
   }
 
+  /** Botão PT / EN / ES da interface, na tela inicial. */
   function botao() {
-    var atual = TextosRef.idioma();
-    return '<div class="idiomas" role="group" aria-label="' + TextosRef.t('idioma.rotulo') + '">' +
+    return seletor(TextosRef.idioma(), 'data-idioma', TextosRef.t('idioma.rotulo'));
+  }
+
+  /** Mesmo visual, para outra escolha de idioma (ex.: as palavras da sala, com `data-palavras`). */
+  function seletor(atual, atributo, rotulo) {
+    return '<div class="idiomas" role="group" aria-label="' + rotulo + '">' +
       TextosRef.IDIOMAS.map(function (id) {
-        return '<button type="button" class="idioma' + (id === atual ? ' is-atual' : '') + '" data-idioma="' + id + '"' +
+        return '<button type="button" class="idioma' + (id === atual ? ' is-atual' : '') + '" ' + atributo + '="' + id + '"' +
           ' lang="' + id + '" aria-label="' + NOMES[id] + '" aria-pressed="' + (id === atual) + '">' + id.toUpperCase() + '</button>';
       }).join('') +
       '</div>';
   }
 
-  return { inicial: inicial, aplicar: aplicar, escolher: escolher, noEndereco: noEndereco, botao: botao, CHAVE: CHAVE, NOMES: NOMES };
+  return { inicial: inicial, aplicar: aplicar, escolher: escolher, noEndereco: noEndereco, botao: botao, seletor: seletor, CHAVE: CHAVE, NOMES: NOMES };
 })();
 
 if (typeof module !== 'undefined' && module.exports) module.exports = Idioma;
