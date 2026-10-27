@@ -16,6 +16,7 @@ var TextosPt = {
   'geral.jogarLocal': 'Jogar num aparelho só',
   'geral.meuPerfil': 'Meu perfil',
   'geral.tentarDeNovo': 'Tentar de novo',
+  'idioma.rotulo': 'Idioma',
 
   // ---------- Conexão (main) ----------
   'conexao.conectando': 'Conectando ao servidor…',

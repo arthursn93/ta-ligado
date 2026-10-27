@@ -23,7 +23,7 @@ var Lobby = (function () {
   }
 
   function linkConvite(codigo) {
-    return window.location.origin + window.location.pathname + '?sala=' + codigo;
+    return window.location.origin + window.location.pathname + '?sala=' + codigo + Idioma.noEndereco();
   }
 
   function moldeInicio() {
@@ -51,6 +51,7 @@ var Lobby = (function () {
       '    <button type="button" class="botao botao-fantasma" data-lobby="perfil">' + t('geral.meuPerfil') + '</button>',
       '    <button type="button" class="botao botao-fantasma" data-lobby="local">' + t('geral.jogarLocal') + '</button>',
       '  </div>',
+      Idioma.botao(),
       '  <a class="lobby-rodape" href="privacidade.html">' + t('lobby.privacidade') + '</a>',
       '</div>'
     ].join('');
@@ -189,7 +190,10 @@ var Lobby = (function () {
           copiarConvite(rede.sala().codigo);
           break;
         case 'sair':
-          rede.sair().then(function () { window.location.href = window.location.pathname; });
+          rede.sair().then(function () {
+            var idioma = Idioma.noEndereco();
+            window.location.href = window.location.pathname + (idioma ? '?' + idioma.slice(1) : '');
+          });
           break;
         case 'perfil':
           Progresso.abrir(rede);
@@ -223,7 +227,24 @@ var Lobby = (function () {
       }
     }
 
+    /** Troca o idioma na tela inicial: redesenha guardando o que já foi digitado. */
+    function trocarIdioma(idioma) {
+      if (idioma === Textos.idioma() || !Idioma.escolher(idioma)) return;
+      var nome = valor('nome');
+      var codigo = valor('codigo');
+      tela = null;
+      render();
+      var campoNome = raiz.querySelector('[name="nome"]');
+      var campoCodigo = raiz.querySelector('[name="codigo"]');
+      if (campoNome) campoNome.value = nome;
+      if (campoCodigo) campoCodigo.value = codigo;
+      var atual = raiz.querySelector('[data-idioma="' + idioma + '"]');
+      if (atual) atual.focus();
+    }
+
     function aoClicar(ev) {
+      var idioma = ev.target.closest('[data-idioma]');
+      if (idioma) { trocarIdioma(idioma.getAttribute('data-idioma')); return; }
       var botao = ev.target.closest('[data-lobby]');
       if (botao && !botao.disabled && botao.type !== 'submit') agir(botao.getAttribute('data-lobby'));
     }

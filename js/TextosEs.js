@@ -13,6 +13,7 @@ var TextosEs = {
   'geral.jogarLocal': 'Jugar en un solo dispositivo',
   'geral.meuPerfil': 'Mi perfil',
   'geral.tentarDeNovo': 'Intentar de nuevo',
+  'idioma.rotulo': 'Idioma',
 
   // ---------- Conexão (main) ----------
   'conexao.conectando': 'Conectando con el servidor…',
