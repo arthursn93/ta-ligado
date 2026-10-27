@@ -16,7 +16,8 @@ var Game = (function () {
   var UtilRef = typeof Util !== 'undefined' ? Util : require('./Util.js');
   var WordBankRef = typeof WordBank !== 'undefined' ? WordBank : require('./WordBank.js');
   var HooksRef = typeof Hooks !== 'undefined' ? Hooks : require('./Hooks.js');
-  var t = (typeof Textos !== 'undefined' ? Textos : require('./Textos.js')).t;
+  var TextosRef = typeof Textos !== 'undefined' ? Textos : require('./Textos.js');
+  var t = TextosRef.t;
 
   var COLUNAS = ['A', 'B', 'C', 'D', 'E'];
   var LINHAS = ['1', '2', '3', '4', '5'];
@@ -98,44 +99,50 @@ var Game = (function () {
       };
     }
 
-    function validarPista(pista) {
-      if (typeof pista !== 'string') return t('pista.naoTexto');
+    /** O que está errado na pista, como { chave, valores }, ou null se ela vale. */
+    function problemaDaPista(pista) {
+      if (typeof pista !== 'string') return { chave: 'pista.naoTexto' };
       var limpa = pista.trim();
-      if (!limpa) return t('pista.vazia');
-      if (/\s/.test(limpa)) return t('pista.umaPalavra');
-      if (limpa.length > TAMANHO_MAX_PISTA) return t('pista.longa');
-      if (/-/.test(limpa)) return t('pista.hifen');
-      if (!/^[\p{L}]+$/u.test(limpa)) return t('pista.soLetras');
+      if (!limpa) return { chave: 'pista.vazia' };
+      if (/\s/.test(limpa)) return { chave: 'pista.umaPalavra' };
+      if (limpa.length > TAMANHO_MAX_PISTA) return { chave: 'pista.longa' };
+      if (/-/.test(limpa)) return { chave: 'pista.hifen' };
+      if (!/^[\p{L}]+$/u.test(limpa)) return { chave: 'pista.soLetras' };
 
       // A pista tem que acrescentar algo: nada de repetir, traduzir ou flexionar palavras da grade.
       var naGrade = s.colunas.concat(s.linhas);
       for (var i = 0; i < naGrade.length; i++) {
-        if (UtilRef.normalizar(naGrade[i]) === UtilRef.normalizar(limpa)) return t('pista.daGrade');
+        if (UtilRef.normalizar(naGrade[i]) === UtilRef.normalizar(limpa)) return { chave: 'pista.daGrade' };
         if (WordBankRef.equivalentes(limpa, naGrade[i], s.pacote)) {
-          return t('pista.parecida', { palavra: naGrade[i].toUpperCase() });
+          return { chave: 'pista.parecida', valores: { palavra: naGrade[i].toUpperCase() } };
         }
       }
 
       // Cada pista vale uma vez por partida, incluindo plurais e variações.
       var repetida = s.historico.filter(function (j) { return UtilRef.mesmaFamilia(j.pista, limpa); })[0];
-      if (repetida) return t('pista.repetida', { pista: repetida.pista.toUpperCase() });
+      if (repetida) return { chave: 'pista.repetida', valores: { pista: repetida.pista.toUpperCase() } };
       return null;
     }
 
+    function validarPista(pista) {
+      var p = problemaDaPista(pista);
+      return p ? t(p.chave, p.valores) : null;
+    }
+
     function darPista(pista) {
-      if (s.fase !== FASE.PISTA) return falha(t('acao.horaPista'));
-      var erro = validarPista(pista);
-      if (erro) return falha(erro);
+      if (s.fase !== FASE.PISTA) return falha('acao.horaPista');
+      var problema = problemaDaPista(pista);
+      if (problema) return falha(problema.chave, problema.valores);
       s.pista = pista.trim();
       s.fase = FASE.PALPITE;
       return sucesso();
     }
 
     function chutar(coordenada) {
-      if (s.fase !== FASE.PALPITE) return falha(t('acao.horaChute'));
-      if (!coordenadaValida(coordenada)) return falha(t('acao.coordenada'));
+      if (s.fase !== FASE.PALPITE) return falha('acao.horaChute');
+      if (!coordenadaValida(coordenada)) return falha('acao.coordenada');
       var palpite = coordenada.toUpperCase();
-      if (s.celulas[palpite] !== null) return falha(t('acao.resolvido'));
+      if (s.celulas[palpite] !== null) return falha('acao.resolvido');
 
       // A carta sorteada é resolvida de qualquer jeito: acertou, marca acerto;
       // errou, a carta é descartada e o quadrado dela fica bloqueado como erro.
@@ -166,8 +173,8 @@ var Game = (function () {
       return { ok: true };
     }
 
-    function falha(mensagem) {
-      return { ok: false, erro: mensagem };
+    function falha(chave, valores) {
+      return TextosRef.falha(chave, valores);
     }
 
     function notificar() {
@@ -176,7 +183,7 @@ var Game = (function () {
 
     /** Aplica uma ação. Retorna { ok: true } ou { ok: false, erro }. */
     function executar(acao) {
-      if (!acao || typeof acao.tipo !== 'string') return falha(t('acao.invalida'));
+      if (!acao || typeof acao.tipo !== 'string') return falha('acao.invalida');
       switch (acao.tipo) {
         case 'NOVA_PARTIDA':
           novaPartida(acao.pacote);
@@ -186,7 +193,7 @@ var Game = (function () {
         case 'CHUTAR':
           return chutar(acao.coordenada);
         default:
-          return falha(t('acao.desconhecidaTipo', { tipo: acao.tipo }));
+          return falha('acao.desconhecidaTipo', { tipo: acao.tipo });
       }
     }
 

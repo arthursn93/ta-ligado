@@ -8,6 +8,7 @@ const crypto = require('crypto');
 const { precisao } = require('./Partida.js');
 const Regras = require('./regras.js');
 const Catalogo = require('./catalogo.js');
+const Textos = require('../../js/Textos.js');
 
 const TAMANHO_HISTORICO = 20;
 
@@ -168,14 +169,14 @@ function montar(nome, linhas, xp, conquistas, escolhido) {
 
 /**
  * Confere se o jogador pode usar o item: existe, é do tipo certo e está liberado.
- * Devolve o objeto de escolhas atualizado, ou { erro }.
+ * Devolve o objeto de escolhas atualizado, ou { erro, chave }.
  */
 function escolher(escolhido, tipo, id, xp, conquistas) {
-  if (Catalogo.TIPOS_VISUAIS.indexOf(tipo) === -1) return { erro: 'Tipo de item inválido.' };
+  if (Catalogo.TIPOS_VISUAIS.indexOf(tipo) === -1) return Textos.falha('servidor.tipoItemInvalido');
   const item = Catalogo.recompensa(id);
-  if (!item || item.tipo !== tipo) return { erro: 'Item não encontrado.' };
+  if (!item || item.tipo !== tipo) return Textos.falha('servidor.itemNaoEncontrado');
   if (!Catalogo.liberada(item, Regras.nivel(xp).nivel, new Set(conquistas.map((c) => c.id)))) {
-    return { erro: 'Esse item ainda está bloqueado.' };
+    return Textos.falha('servidor.itemBloqueado');
   }
   return { escolhido: Object.assign({}, escolhido, { [tipo]: id }) };
 }
@@ -184,7 +185,7 @@ function escolher(escolhido, tipo, id, xp, conquistas) {
 function selo(xp, conquistas, escolhido) {
   const nivel = Regras.nivel(xp || 0).nivel;
   const visual = Catalogo.visualEfetivo(escolhido, nivel, new Set((conquistas || []).map((c) => c.id)));
-  return { nivel, titulo: Catalogo.recompensa(visual.titulo).nome, moldura: visual.moldura };
+  return { nivel, titulo: Catalogo.recompensa(visual.titulo).nome, tituloId: visual.titulo, moldura: visual.moldura };
 }
 
 module.exports = { hashToken, linhasDoResumo, comXp, comConquistas, resultadoXp, escolher, selo, valeGravar, montar, TAMANHO_HISTORICO };

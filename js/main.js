@@ -7,6 +7,9 @@
 (function () {
   'use strict';
   var t = Textos.t;
+  // Prévia dos outros idiomas: ?idioma=en ou ?idioma=es. Ainda não fica salvo nem tem botão.
+  var idioma = /[?&]idioma=([a-z]+)/.exec(window.location.search);
+  if (idioma && Textos.usar(idioma[1])) document.documentElement.lang = t('geral.local');
   Theme.aplicar(Theme.salva());
   var raiz = document.getElementById('app');
   var som = Som.criar();

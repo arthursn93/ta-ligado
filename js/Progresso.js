@@ -34,6 +34,26 @@ var Progresso = (function () {
     experiencia: 'progresso.catExperiencia', habilidade: 'progresso.catHabilidade'
   };
 
+  // ---------- Nomes de títulos, itens e conquistas ----------
+  // O servidor manda o nome em português e o id; aqui vira o texto do idioma escolhido.
+
+  function nomeItem(id, reserva) {
+    return Textos.ou('item.' + id, reserva);
+  }
+
+  /** Título de um nível ou de um selo ({titulo, tituloId}). */
+  function titulo(x) {
+    return x.tituloId ? nomeItem(x.tituloId, x.titulo) : x.titulo;
+  }
+
+  function nomeConquista(c) {
+    return Textos.ou('conquista.' + c.id, c.nome);
+  }
+
+  function textoConquista(c) {
+    return Textos.ou('conquistaTexto.' + c.id, c.descricao);
+  }
+
   // ---------- Selo ao lado do nome ----------
 
   /** Classe da moldura do avatar (vazia sem moldura). */
@@ -46,8 +66,8 @@ var Progresso = (function () {
   function selo(jogador) {
     var s = jogador && jogador.selo;
     if (!s) return '';
-    return '<span class="selo-nivel" title="' + t('progresso.nivelTitulo', { nivel: s.nivel, titulo: esc(s.titulo) }) + '">' +
-      '<b>' + s.nivel + '</b><span class="selo-titulo">' + esc(s.titulo) + '</span></span>';
+    return '<span class="selo-nivel" title="' + t('progresso.nivelTitulo', { nivel: s.nivel, titulo: esc(titulo(s)) }) + '">' +
+      '<b>' + s.nivel + '</b><span class="selo-titulo">' + esc(titulo(s)) + '</span></span>';
   }
 
   // ---------- Barra de XP ----------
@@ -58,7 +78,7 @@ var Progresso = (function () {
       ? t('progresso.xpMaximo', { xp: numero(nivel.xp) })
       : t('progresso.xpFalta', { xp: numero(nivel.xp), falta: numero(nivel.falta), proximo: nivel.nivel + 1 });
     return '<div class="xp">' +
-      '<div class="xp-topo"><span class="xp-nivel">' + t('progresso.nivel', { nivel: nivel.nivel }) + '</span><span class="xp-titulo">' + esc(nivel.titulo) + '</span></div>' +
+      '<div class="xp-topo"><span class="xp-nivel">' + t('progresso.nivel', { nivel: nivel.nivel }) + '</span><span class="xp-titulo">' + esc(titulo(nivel)) + '</span></div>' +
       '<div class="xp-barra" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '" aria-label="' + t('progresso.barraRotulo') + '">' +
         '<span style="width:' + pct + '%"></span></div>' +
       '<p class="xp-texto">' + texto + '</p>' +
@@ -100,9 +120,9 @@ var Progresso = (function () {
         });
       }
       html =
-        (p.subiuDeNivel ? '<p class="progresso-destaque">' + t('progresso.subiu', { nivel: p.nivel.nivel, titulo: esc(p.nivel.titulo) }) + '</p>' : '') +
+        (p.subiuDeNivel ? '<p class="progresso-destaque">' + t('progresso.subiu', { nivel: p.nivel.nivel, titulo: esc(titulo(p.nivel)) }) + '</p>' : '') +
         (p.conquistas || []).map(function (c) {
-          return '<p class="progresso-conquista"><span aria-hidden="true">🏅</span> <b>' + esc(c.nome) + '</b> · ' + esc(c.descricao) + '</p>';
+          return '<p class="progresso-conquista"><span aria-hidden="true">🏅</span> <b>' + esc(nomeConquista(c)) + '</b> · ' + esc(textoConquista(c)) + '</p>';
         }).join('') +
         '<ul class="xp-detalhe">' + linhas.map(function (d) {
           return '<li><span>' + esc(d.texto || motivo(d, nomes)) + '</span><b>+' + d.xp + '</b></li>';
@@ -119,7 +139,7 @@ var Progresso = (function () {
   function condicao(item, conquistas) {
     if (item.condicao.nivel) return t('progresso.nivel', { nivel: item.condicao.nivel });
     var c = conquistas.filter(function (x) { return x.id === item.condicao.conquista; })[0];
-    return t('progresso.condConquista', { nome: c ? c.nome : '' });
+    return t('progresso.condConquista', { nome: c ? nomeConquista(c) : '' });
   }
 
   function data(ms) {
@@ -164,7 +184,7 @@ var Progresso = (function () {
       html += '<p class="perfil-categoria">' + t(CATEGORIAS[cat]) + '</p><ul class="perfil-conquistas">' + lista.map(function (c) {
         return '<li class="' + (c.desbloqueada ? 'is-feita' : '') + '">' +
           '<span class="conquista-icone" aria-hidden="true">' + (c.desbloqueada ? '🏅' : '🔒') + '</span>' +
-          '<span><b>' + esc(c.nome) + '</b><small>' + esc(c.descricao) +
+          '<span><b>' + esc(nomeConquista(c)) + '</b><small>' + esc(textoConquista(c)) +
           (c.desbloqueada ? ' · ' + data(c.em) : ' · +' + c.xp + ' XP') + '</small></span></li>';
       }).join('') + '</ul>';
     });
@@ -177,7 +197,7 @@ var Progresso = (function () {
         return '<button type="button" class="item' + (escolhido ? ' is-escolhido' : '') + '"' +
           ' data-item-tipo="' + tipo.id + '" data-item-id="' + esc(x.id) + '"' +
           ' aria-pressed="' + escolhido + '"' + (x.liberada ? '' : ' disabled') + '>' +
-          esc(x.nome) + (x.liberada ? '' : '<small>🔒 ' + esc(condicao(x, p.conquistas)) + '</small>') + '</button>';
+          esc(nomeItem(x.id, x.nome)) + (x.liberada ? '' : '<small>🔒 ' + esc(condicao(x, p.conquistas)) + '</small>') + '</button>';
       }).join('') + '</div>';
     });
     html += '<div class="erro-campo" role="alert"></div>';
@@ -253,5 +273,5 @@ var Progresso = (function () {
     });
   }
 
-  return { selo: selo, classeMoldura: classeMoldura, blocoFim: blocoFim, barra: barra, abrir: abrir };
+  return { selo: selo, titulo: titulo, classeMoldura: classeMoldura, blocoFim: blocoFim, barra: barra, abrir: abrir };
 })();

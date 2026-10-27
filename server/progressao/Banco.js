@@ -11,6 +11,7 @@ const fs = require('fs');
 const path = require('path');
 const { Pool } = require('pg');
 const Perfil = require('./Perfil.js');
+const Textos = require('../../js/Textos.js');
 const Regras = require('./regras.js');
 const log = require('../log.js').padrao;
 
@@ -169,7 +170,7 @@ function criar(url) {
       const j = await cliente.query('SELECT id, xp, visual FROM jogadores WHERE token_hash = $1 FOR UPDATE', [Perfil.hashToken(token)]);
       if (j.rowCount === 0) {
         await cliente.query('ROLLBACK');
-        return { erro: 'Jogue uma partida para liberar itens.' };
+        return Textos.falha('servidor.semItens');
       }
       const eu = j.rows[0];
       const r = Perfil.escolher(eu.visual, tipo, id, eu.xp, await conquistasDoJogador(cliente, eu.id));
