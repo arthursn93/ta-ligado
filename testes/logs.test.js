@@ -52,7 +52,9 @@ test('cada limite atingido entra na contagem agrupada, sem nomes, códigos, toke
   const criado = await a.pedir('criar', { nome: 'Ana Souza', token: 'token-secreto-ana' });
   assert.ok(criado.ok);
   assert.equal((await a.pedir('criar', { nome: 'Ana Souza', token: 'token-secreto-ana' })).ok, false); // criar
-  await b.pedir('entrar', { codigo: 'ZZZZ', nome: 'Bia Lima', token: 'token-secreto-bia' });
+  // Erro chega com a mensagem em português e a chave, para o aparelho mostrar no idioma dele.
+  assert.deepEqual(await b.pedir('entrar', { codigo: 'ZZZZ', nome: 'Bia Lima', token: 'token-secreto-bia' }),
+    { ok: false, erro: 'Sala não encontrada. Confira o código.', chave: 'servidor.salaNaoEncontradaCodigo' });
   assert.match((await b.pedir('entrar', { codigo: 'ZZZZ', nome: 'Bia Lima', token: 'token-secreto-bia' })).erro, /Muitas tentativas/); // entrar
   assert.ok((await a.pedir('perfil', { token: 'token-secreto-ana' })).ok);
   assert.equal((await a.pedir('perfil', { token: 'token-secreto-ana' })).ok, false); // perfil

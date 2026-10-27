@@ -53,7 +53,7 @@ var Rede = (function () {
       return new Promise(function (resolver) {
         if (!socket.connected) { resolver({ ok: false, erro: t('conexao.semConexao') }); return; }
         socket.timeout(8000).emit(evento, dados || {}, function (falhou, resposta) {
-          resolver(falhou ? { ok: false, erro: t('conexao.semResposta') } : resposta);
+          resolver(falhou ? { ok: false, erro: t('conexao.semResposta') } : Textos.traduzir(resposta));
         });
       });
     }

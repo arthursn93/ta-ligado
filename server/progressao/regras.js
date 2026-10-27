@@ -30,9 +30,14 @@ function xpDoNivel(n) {
   return 50 * n * (n - 1);
 }
 
+/** Nível em que se ganhou o título de quem está no nível n. */
+function nivelDoTitulo(n) {
+  for (let i = n; i >= 1; i--) if (TITULOS[i]) return i;
+  return 1;
+}
+
 function titulo(n) {
-  for (let i = n; i >= 1; i--) if (TITULOS[i]) return TITULOS[i];
-  return TITULOS[1];
+  return TITULOS[nivelDoTitulo(n)];
 }
 
 /** Nível e progresso a partir do XP total. */
@@ -44,6 +49,7 @@ function nivel(xp) {
   return {
     nivel: n,
     titulo: titulo(n),
+    tituloId: 'titulo_nivel_' + nivelDoTitulo(n), // para o aparelho mostrar o título no idioma dele
     xp,
     xpDoNivel: xpDoNivel(n),
     xpProximoNivel: maximo ? null : xpDoNivel(n + 1),

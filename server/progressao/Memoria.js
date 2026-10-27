@@ -5,6 +5,7 @@
 'use strict';
 
 const Perfil = require('./Perfil.js');
+const Textos = require('../../js/Textos.js');
 const Regras = require('./regras.js');
 
 function criar() {
@@ -51,7 +52,7 @@ function criar() {
     },
     async escolherVisual(token, tipo, id) {
       const h = Perfil.hashToken(token);
-      if (!nomes.has(h)) return { erro: 'Jogue uma partida para liberar itens.' };
+      if (!nomes.has(h)) return Textos.falha('servidor.semItens');
       const r = Perfil.escolher(visuais.get(h), tipo, id, xps.get(h) || 0, conquistas.get(h) || []);
       if (r.erro) return r;
       visuais.set(h, r.escolhido);

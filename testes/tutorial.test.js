@@ -34,12 +34,18 @@ test('sem armazenamento no aparelho, não abre sozinho e não quebra', () => {
   assert.doesNotThrow(() => Tutorial.marcarVisto(quebrado));
 });
 
-test('as pistas do exemplo seguem as regras do jogo', () => {
-  const Game = require('../js/Game.js');
-  // A pista boa é uma palavra só, só com letras e fora da grade de exemplo.
-  assert.match(TextosPt['tutorial.pistaBoa'], /^\p{L}+$/u);
-  assert.match(TextosPt['tutorial.pistaTurma'], /^\p{L}+$/u);
-  // A pista "de mais de uma palavra" é mesmo recusada pelo jogo.
-  const jogo = Game.criar({ rng: () => 0.5 });
-  assert.equal(jogo.executar({ tipo: 'DAR_PISTA', pista: TextosPt['tutorial.pistaDuas'] }).erro, TextosPt['pista.umaPalavra']);
-});
+for (const arquivo of ['TextosPt', 'TextosEn', 'TextosEs']) {
+  test('as pistas do exemplo seguem as regras do jogo (' + arquivo + ')', () => {
+    const Game = require('../js/Game.js');
+    const tabela = require('../js/' + arquivo + '.js');
+    const grade = ['colunaA', 'colunaB', 'colunaC', 'linha1', 'linha2', 'linha3'].map((k) => tabela['tutorial.' + k]);
+    // A pista boa é uma palavra só, só com letras e fora da grade de exemplo.
+    for (const chave of ['tutorial.pistaBoa', 'tutorial.pistaTurma']) {
+      assert.match(tabela[chave], /^\p{L}+$/u);
+      assert.ok(!grade.includes(tabela[chave]), chave + ' não pode ser palavra da grade');
+    }
+    // A pista "de mais de uma palavra" é mesmo recusada pelo jogo.
+    const jogo = Game.criar({ rng: () => 0.5 });
+    assert.equal(jogo.executar({ tipo: 'DAR_PISTA', pista: tabela['tutorial.pistaDuas'] }).chave, 'pista.umaPalavra');
+  });
+}

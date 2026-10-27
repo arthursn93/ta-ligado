@@ -326,7 +326,7 @@ var UI = (function () {
           var classes = (j.online ? '' : ' is-offline') + (j.id === sala.dadorId ? ' is-dador' : '') + (j.id === sala.euId ? ' is-eu' : '') +
             Progresso.classeMoldura(j);
           return '<li class="chip' + classes + '" data-jogador-id="' + esc(j.id) + '" title="' + esc(j.nome) +
-            (j.selo ? t('jogo.chipNivel', { nivel: j.selo.nivel, titulo: esc(j.selo.titulo) }) : '') +
+            (j.selo ? t('jogo.chipNivel', { nivel: j.selo.nivel, titulo: esc(Progresso.titulo(j.selo)) }) : '') +
             (j.id === sala.dadorId ? t('jogo.chipDador') : '') + (j.online ? '' : t('jogo.chipDesconectado')) + '">' +
             (j.id === sala.dadorId ? '<span aria-hidden="true">🎤</span> ' : '') + esc(j.nome) +
             (j.id === sala.anfitriaoId ? ' <span aria-label="' + t('jogo.chipAnfitriao') + '">👑</span>' : '') +
