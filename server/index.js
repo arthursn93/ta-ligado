@@ -2,8 +2,9 @@
  * Servidor do Tá Ligado?: serve os arquivos do jogo e liga as salas ao Socket.io.
  *
  * Eventos do cliente (todos com resposta via ack):
- *   'criar'   {nome, token}          -> {ok, codigo} | {ok:false, erro}
+ *   'criar'   {nome, token, idioma}  -> {ok, codigo} | {ok:false, erro}   idioma das palavras: 'pt' | 'en' | 'es'
  *   'entrar'  {codigo, nome, token}  -> {ok, codigo} | {ok:false, erro}
+ *   'sala:idioma' {idioma}           -> {ok} | {ok:false, erro}   anfitrião, antes da primeira partida
  *   'iniciar'                        -> {ok} | {ok:false, erro}
  *   'acao'    {acao}                 -> {ok} | {ok:false, erro}
  *   'sair'                           -> {ok}
@@ -382,7 +383,7 @@ function criarServidor(opcoes) {
       if (!tokenValido(dados.token)) return responder(ack, Textos.falha('servidor.semIdentificacao'));
       if (limiteCriar.estourou(ip)) { bloqueios.contar('criar'); return responder(ack, Textos.falha('servidor.muitasSalas')); }
       limiteCriar.contar(ip);
-      const r = salas.criarSala(dados.token, dados.nome);
+      const r = salas.criarSala(dados.token, dados.nome, dados.idioma);
       if (!r.ok) return responder(ack, r);
       responder(ack, { ok: true, codigo: r.sala.codigo });
       entrarNoCanal(r.sala, String(dados.token));
@@ -403,6 +404,12 @@ function criarServidor(opcoes) {
       responder(ack, { ok: true, codigo: r.sala.codigo });
       entrarNoCanal(r.sala, String(dados.token));
       atualizarSelo(r.sala.codigo, String(dados.token), true);
+    });
+
+    socket.on('sala:idioma', (dados, ack) => {
+      const r = salas.definirIdioma(socket.data.codigo, socket.data.token, dados && dados.idioma);
+      responder(ack, r.ok ? { ok: true } : soErro(r));
+      if (r.ok) transmitir(r.sala);
     });
 
     socket.on('iniciar', (_dados, ack) => {

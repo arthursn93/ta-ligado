@@ -139,17 +139,27 @@ var Lobby = (function () {
       var online = sala.jogadores.filter(function (j) { return j.online; }).length;
       if (opcoes.som && onlineAntes >= 0 && online > onlineAntes) opcoes.som.tocar('entrou');
       onlineAntes = online;
-      var html;
+      var html = palavrasDaSala(sala);
       if (rede.souAnfitriao()) {
-        html = '<button type="button" class="botao botao-primario botao-largo" data-lobby="comecar"' +
+        html += '<button type="button" class="botao botao-primario botao-largo" data-lobby="comecar"' +
           (online < 2 ? ' disabled' : '') + '>' + t('lobby.comecar') + '</button>' +
           (online < 2 ? '<p class="suave">' + t('lobby.precisaDois') + '</p>' : '');
       } else {
         var anfitriao = rede.jogador(sala.anfitriaoId);
-        html = '<p class="suave">' + t('lobby.esperando', { nome: esc(anfitriao ? anfitriao.nome : t('geral.oAnfitriao')) }) + '</p>';
+        html += '<p class="suave">' + t('lobby.esperando', { nome: esc(anfitriao ? anfitriao.nome : t('geral.oAnfitriao')) }) + '</p>';
       }
       if (html !== acoesAtuais) { acoesAtuais = html; raiz.querySelector('.lobby-acoes').innerHTML = html; }
       if (opcoes.social) opcoes.social.atualizar();
+    }
+
+    /** O idioma das palavras da grade: o anfitrião escolhe, os outros só veem. */
+    function palavrasDaSala(sala) {
+      var idioma = sala.idioma || 'pt';
+      if (!rede.souAnfitriao()) {
+        return '<p class="lobby-palavras suave">' + t('lobby.palavras') + ': <strong lang="' + idioma + '">' + Idioma.NOMES[idioma] + '</strong></p>';
+      }
+      return '<div class="lobby-palavras"><p class="rotulo">' + t('lobby.palavras') + '</p>' +
+        Idioma.seletor(idioma, 'data-palavras', t('lobby.palavras')) + '</div>';
     }
 
     function mostrarErro(mensagem) {
@@ -245,6 +255,11 @@ var Lobby = (function () {
     function aoClicar(ev) {
       var idioma = ev.target.closest('[data-idioma]');
       if (idioma) { trocarIdioma(idioma.getAttribute('data-idioma')); return; }
+      var palavras = ev.target.closest('[data-palavras]');
+      if (palavras) {
+        if (palavras.getAttribute('aria-pressed') !== 'true') executar(rede.idiomaDasPalavras(palavras.getAttribute('data-palavras')));
+        return;
+      }
       var botao = ev.target.closest('[data-lobby]');
       if (botao && !botao.disabled && botao.type !== 'submit') agir(botao.getAttribute('data-lobby'));
     }

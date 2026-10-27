@@ -25,9 +25,14 @@ const LIMITE_MENSAGENS = 6; // por jogador, a cada JANELA_MENSAGENS_MS
 const JANELA_MENSAGENS_MS = 10000;
 const ESTADOS_VOZ = ['ouvindo', 'mudo', 'ligado']; // null = fora da voz
 
+/** Baralho das palavras da grade em cada idioma da sala. */
+function pacoteDoIdioma(idioma) {
+  return idioma === 'pt' ? 'classico' : 'classico-' + idioma;
+}
+
 function criarGerenciador(opcoes) {
   opcoes = opcoes || {};
-  const criarJogo = opcoes.criarJogo || (() => Game.criar());
+  const criarJogo = opcoes.criarJogo || ((opcoesJogo) => Game.criar(opcoesJogo));
   // Chamado com o resumo de cada partida que termina (concluída ou interrompida).
   const aoEncerrarPartida = opcoes.aoEncerrarPartida || (() => {});
   // Com progressão ligada, a tela do placar final espera o XP de cada um.
@@ -62,14 +67,18 @@ function criarGerenciador(opcoes) {
     return jogador;
   }
 
-  /** Cria uma sala e coloca quem criou como anfitrião. */
-  function criarSala(token, nome) {
+  /**
+   * Cria uma sala e coloca quem criou como anfitrião.
+   * `idioma` é o das palavras da grade (o do aparelho de quem cria); vale para todos da sala.
+   */
+  function criarSala(token, nome, idioma) {
     nome = limparNome(nome);
     if (!token) return erro('servidor.semIdentificacao');
     if (!nome) return erro('geral.digiteNome');
     const sala = {
       codigo: novoCodigo(), jogadores: [], anfitriaoId: null, jogo: null, dadorId: null, rodadaDoDador: 0,
-      chat: [], seqMensagem: 0, partida: null, ultimaPartida: null, progresso: null
+      chat: [], seqMensagem: 0, partida: null, ultimaPartida: null, progresso: null,
+      idioma: Textos.IDIOMAS.includes(idioma) ? idioma : 'pt'
     };
     const jogador = novoJogador(sala, token, nome);
     sala.anfitriaoId = jogador.id;
@@ -185,6 +194,18 @@ function criarGerenciador(opcoes) {
     sala.rodadaDoDador = v.rodada;
   }
 
+  /** O anfitrião troca o idioma das palavras da grade. Só na sala de espera, antes da primeira partida. */
+  function definirIdioma(codigo, token, idioma) {
+    const sala = salas.get(codigo);
+    if (!sala) return erro('servidor.salaNaoEncontrada');
+    const jogador = acharJogador(sala, token);
+    if (!jogador || jogador.id !== sala.anfitriaoId) return erro('servidor.soAnfitriaoIdioma');
+    if (!Textos.IDIOMAS.includes(idioma)) return erro('servidor.idiomaInvalido');
+    if (sala.jogo) return erro('servidor.idiomaDepois');
+    sala.idioma = idioma;
+    return { ok: true, sala };
+  }
+
   /** O anfitrião começa a partida (ou uma nova). */
   function iniciar(codigo, token) {
     const sala = salas.get(codigo);
@@ -193,11 +214,11 @@ function criarGerenciador(opcoes) {
     if (!jogador || jogador.id !== sala.anfitriaoId) return erro('servidor.soAnfitriao');
     if (sala.jogadores.filter((j) => j.online).length < 2) return erro('servidor.chamarMais');
     if (!sala.jogo) {
-      sala.jogo = criarJogo();
+      sala.jogo = criarJogo({ pacote: pacoteDoIdioma(sala.idioma) });
     } else {
       // Recomeçar no meio deixa a partida anterior como interrompida.
       fecharPartida(sala, Partida.ESTADO.INTERROMPIDA);
-      sala.jogo.executar({ tipo: 'NOVA_PARTIDA' });
+      sala.jogo.executar({ tipo: 'NOVA_PARTIDA', pacote: pacoteDoIdioma(sala.idioma) });
     }
     sala.partida = Partida.iniciar(sala.codigo);
     sala.rodadaDoDador = 0; // força a troca: a vez segue para o próximo da roda
@@ -335,6 +356,7 @@ function criarGerenciador(opcoes) {
       sala: {
         codigo: sala.codigo,
         anfitriaoId: sala.anfitriaoId,
+        idioma: sala.idioma,
         dadorId: sala.dadorId,
         euId: eu ? eu.id : null,
         jogadores: sala.jogadores.map((j) => ({ id: j.id, nome: j.nome, online: j.online, voz: j.voz, selo: j.selo }))
@@ -350,6 +372,7 @@ function criarGerenciador(opcoes) {
     desconectar,
     sair,
     removerSeVazia,
+    definirIdioma,
     iniciar,
     agir,
     visaoPara,

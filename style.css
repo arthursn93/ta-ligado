@@ -1209,3 +1209,8 @@ button { font: inherit; color: inherit; }
 .idioma:hover { color: var(--primaria); }
 .idioma.is-atual { background: var(--primaria); color: #fff; }
 .idioma:focus-visible { outline: 3px solid var(--primaria); outline-offset: 2px; }
+
+/* ---------- Idioma das palavras na sala de espera ---------- */
+.lobby-palavras { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-bottom: 12px; }
+.lobby-palavras .rotulo { margin: 0; }
+p.lobby-palavras { margin: 0 0 8px; }
