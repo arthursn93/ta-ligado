@@ -7,9 +7,7 @@
 (function () {
   'use strict';
   var t = Textos.t;
-  // Prévia dos outros idiomas: ?idioma=en ou ?idioma=es. Ainda não fica salvo nem tem botão.
-  var idioma = /[?&]idioma=([a-z]+)/.exec(window.location.search);
-  if (idioma && Textos.usar(idioma[1])) document.documentElement.lang = t('geral.local');
+  Idioma.aplicar(Idioma.inicial());
   Theme.aplicar(Theme.salva());
   var raiz = document.getElementById('app');
   var som = Som.criar();
@@ -70,7 +68,8 @@
     comecou = true;
     clearTimeout(relogio);
     function voltarAoInicio(aviso) {
-      window.location.href = window.location.pathname + (aviso ? '?aviso=' + aviso : '');
+      var busca = (aviso ? '&aviso=' + aviso : '') + Idioma.noEndereco();
+      window.location.href = window.location.pathname + (busca ? '?' + busca.slice(1) : '');
     }
     Lobby.criar(raiz, rede, {
       social: social,

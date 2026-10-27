@@ -13,6 +13,7 @@ var TextosEn = {
   'geral.jogarLocal': 'Play on one device',
   'geral.meuPerfil': 'My profile',
   'geral.tentarDeNovo': 'Try again',
+  'idioma.rotulo': 'Language',
 
   // ---------- Conexão (main) ----------
   'conexao.conectando': 'Connecting to the server…',
