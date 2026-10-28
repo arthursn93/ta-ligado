@@ -8,11 +8,13 @@
  */
 'use strict';
 
+// Canais de divulgação: o link de cada um leva `?de=<canal>`. Só estes contam.
+const CANAIS = ['whatsapp', 'instagram', 'tiktok', 'discord', 'reddit', 'itch'];
 const EVENTOS = [
   'abriu', 'abriu_convite', 'abriu_voltou', 'abriu_pt', 'abriu_en', 'abriu_es',
   'sala_criada', 'entrou_na_sala', 'partida_iniciada', 'partida_concluida', 'partida_interrompida',
   'partida_local'
-];
+].concat(CANAIS.map((canal) => 'abriu_de_' + canal));
 const INTERVALO_MS = 60 * 1000;
 const FUSO = 'America/Sao_Paulo';
 
@@ -69,4 +71,4 @@ function criar(opcoes) {
   return { contar, despejar, parar };
 }
 
-module.exports = { criar, diaDe, EVENTOS };
+module.exports = { criar, diaDe, EVENTOS, CANAIS };

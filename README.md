@@ -78,6 +78,7 @@ Para saber se o jogo está sendo usado, o servidor soma contadores por dia (hor�
 | `abriu`, `abriu_pt`, `abriu_en`, `abriu_es` | A tela inicial carrega (uma vez por carregamento), no idioma da tela |
 | `abriu_convite` | A tela carrega por um link de convite |
 | `abriu_voltou` | O navegador já tinha aberto o jogo em outro dia (ele guarda só a data da última visita e manda sim ou não) |
+| `abriu_de_whatsapp`, `abriu_de_instagram`, `abriu_de_tiktok`, `abriu_de_discord`, `abriu_de_reddit`, `abriu_de_itch` | A tela carrega por um link de divulgação com `?de=<canal>` (ex.: `https://ta-ligado.onrender.com/?de=whatsapp`). Canal fora da lista não conta |
 | `sala_criada`, `entrou_na_sala` | Alguém cria uma sala ou entra pela primeira vez numa sala que já existe (voltar depois de recarregar não conta) |
 | `partida_iniciada`, `partida_concluida`, `partida_interrompida` | Uma partida online começa ou termina |
 | `partida_local` | Alguém começa o modo local com o servidor conectado |
@@ -177,7 +178,7 @@ Abra o `index.html` direto no navegador (dois cliques, sem servidor) e o aparelh
 | `js/Theme.js` | Skins de cor. |
 | `style.css` | Visual estilo jogo de cartas retrô. |
 | `privacidade.html` | Privacidade e termos de uso. |
-| `favicon.svg`, `icone-180.png`, `previa-2.png` | Ícone da aba, ícone do celular e imagem da prévia do link (WhatsApp etc.), nas cores do jogo. Para refazer a prévia e o ícone do celular: edite `scripts/previa.html` ou `favicon.svg` e rode `node scripts/gerar-previa.js` (usa o Playwright). Se mudar a imagem, troque também o nome do arquivo, porque o WhatsApp guarda a prévia antiga. |
+| `favicon.svg`, `icone-180.png`, `previa-2.png` | Ícone da aba, ícone do celular e imagem da prévia do link (WhatsApp etc.), nas cores do jogo. Para refazer a prévia e o ícone do celular: edite `scripts/previa.html` ou `favicon.svg` e rode `node scripts/gerar-previa.js` (usa o Playwright). Se mudar a imagem, troque também o nome do arquivo, porque o WhatsApp guarda a prévia antiga. Os textos da prévia em inglês e espanhol (para convites com `?idioma=en` ou `?idioma=es`) ficam em `PREVIAS`, em `server/index.js`. |
 | `testes/` | Testes da lógica, das salas e do servidor. |
 | `scripts/backup-*`, `docs/backup.md` | Backup diário do banco: cópia, criptografia, restauração de teste e o usuário só de leitura do Neon. |
 

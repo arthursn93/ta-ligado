@@ -57,6 +57,11 @@
     var d = new Date();
     return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
   }
+  /** Canal de divulgação do link (`?de=whatsapp`). O servidor só conta os da lista dele. */
+  function deOnde() {
+    var m = /[?&]de=([a-z]+)/.exec(window.location.search);
+    return m ? m[1] : null;
+  }
   /** Conta a abertura da tela. `voltou` = este navegador já tinha aberto o jogo em outro dia. */
   function avisarAbertura() {
     var ultima = null;
@@ -67,7 +72,8 @@
     socket.emit('metricas:abriu', {
       idioma: Textos.idioma(),
       convite: /[?&]sala=/.test(window.location.search),
-      voltou: !!ultima && ultima !== hoje()
+      voltou: !!ultima && ultima !== hoje(),
+      de: deOnde()
     });
   }
   /** Conta o início do modo local antes de fechar a conexão; sem conexão, só segue. */
