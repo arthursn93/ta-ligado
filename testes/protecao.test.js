@@ -167,6 +167,7 @@ test('privacidade: conta backup, prazo, onde ficam os dados, direitos e respons√
     '<h2>Respons√°vel e contato</h2>',
     'mantido por <strong>arthursn93</strong>',
     'https://github.com/arthursn93/ta-ligado/issues',
+    'mailto:ta.ligado.games.2026@gmail.com',
     '<strong>Apagar meus dados</strong>',
     'cor do tabuleiro'
   ]) assert.ok(html.includes(trecho), 'falta: ' + trecho);
