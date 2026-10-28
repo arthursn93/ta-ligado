@@ -78,6 +78,33 @@ test('fontes: servidas pelo próprio jogo, guardadas por um ano, sem Google Font
   }
 });
 
+test('buscadores: robots.txt, sitemap e texto fixo na página com endereço canônico', async (t) => {
+  const srv = await subir();
+  t.after(() => srv.io.close());
+  const host = { Host: 'ta-ligado.onrender.com', 'X-Forwarded-Proto': 'https' };
+  const robots = await pedirHttp(srv.porta, '/robots.txt', host);
+  assert.equal(robots.status, 200);
+  assert.match(robots.headers['content-type'], /^text\/plain/);
+  assert.match(robots.corpo.toString(), /^User-agent: \*\nAllow: \/\n/);
+  assert.match(robots.corpo.toString(), /Sitemap: https:\/\/ta-ligado\.onrender\.com\/sitemap\.xml/);
+  const mapa = await pedirHttp(srv.porta, '/sitemap.xml?x=1', host);
+  assert.equal(mapa.status, 200);
+  assert.match(mapa.headers['content-type'], /^application\/xml/);
+  const enderecos = [...mapa.corpo.toString().matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
+  assert.deepEqual(enderecos, ['/', '/privacidade.html', '/privacidade-en.html', '/privacidade-es.html'].map((p) => 'https://ta-ligado.onrender.com' + p));
+  for (const e of enderecos) {
+    const caminho = e.replace('https://ta-ligado.onrender.com', '');
+    assert.equal((await pedirHttp(srv.porta, caminho)).status, 200, caminho);
+  }
+  const pagina = (await pedirHttp(srv.porta, '/?sala=ABCD', host)).corpo.toString();
+  assert.match(pagina, /<link rel="canonical" href="https:\/\/ta-ligado\.onrender\.com\/">/);
+  const miolo = /<main id="app">([\s\S]*?)<\/main>/.exec(pagina)[1];
+  assert.match(miolo, /<h1[^>]*>Tá <span>Ligado\?<\/span><\/h1>/);
+  assert.match(miolo, /Como jogar/);
+  assert.match(miolo, /href="privacidade\.html"/);
+  assert.equal((await pedirHttp(srv.porta, '/robots.txt', { })).headers['x-content-type-options'], 'nosniff');
+});
+
 test('origem: aceita o próprio site e as liberadas, recusa as outras', async (t) => {
   const req = (origin) => ({ headers: { host: 'ta-ligado.onrender.com', origin } });
   assert.ok(origemPermitida(req(undefined), {}));

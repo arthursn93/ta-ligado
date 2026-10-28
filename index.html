@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#f7f8fc">
   <title>Tá Ligado? Jogo de palavras para jogar com a turma</title>
   <meta name="description" content="Jogo cooperativo de associação de palavras: uma pista liga duas palavras. Crie uma sala, mande o link e jogue com a turma, cada um no seu celular. Grátis, sem cadastro.">
+  <link rel="canonical" href="{{ORIGEM}}/">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icone-180.png">
   <meta property="og:type" content="website">
@@ -25,7 +26,22 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body data-skin="padrao">
-  <main id="app"></main>
+  <main id="app">
+    <!-- Texto fixo para buscadores e prévias de link. O jogo troca tudo isto assim que carrega. -->
+    <div class="lobby">
+      <h1 class="marca marca-grande">Tá <span>Ligado?</span></h1>
+      <p class="lobby-sub">Jogo cooperativo de palavras: uma pista liga duas palavras. Crie uma sala, mande o link e jogue com a turma, cada um no seu celular. Grátis e sem cadastro.</p>
+      <section class="cartao-modal lobby-cartao">
+        <h2>Como jogar</h2>
+        <ol>
+          <li>O tabuleiro tem 5 colunas e 5 linhas de palavras. Cada casa junta a palavra da coluna com a da linha.</li>
+          <li>Na sua vez, só você vê a casa secreta e dá uma pista de uma palavra só que ligue as duas.</li>
+          <li>A turma tenta achar a casa certa. Acertem o máximo das 25 cartas juntos.</li>
+        </ol>
+      </section>
+      <p class="lobby-rodape"><a href="privacidade.html">Privacidade e termos de uso</a></p>
+    </div>
+  </main>
 
   <!-- Scripts comuns (sem import) para abrir com dois cliques. A ordem importa. -->
   <script src="js/TextosPt.js"></script>
