@@ -2,6 +2,8 @@
 
 Passo a passo para atender quem pede, pela página de issues do GitHub, para ver ou apagar o próprio histórico. A página `privacidade.html` promete só o que está aqui: não há prazo fixo de resposta.
 
+**Antes de tudo:** quem ainda tem o aparelho e o navegador em que jogou pode apagar sozinho, em **Meu perfil → Apagar meus dados** (faz o mesmo que o passo 4, na hora). Responda a issue lembrando disso. Este passo a passo é para quem não tem mais esse acesso (limpou os dados do site, trocou de navegador ou de aparelho).
+
 Nada aqui roda sozinho. Os passos 1 a 3 só leem o banco. O passo 4 apaga e **só deve ser feito por você**, depois de ter certeza de que achou a pessoa certa.
 
 ## O que o banco guarda de cada jogador

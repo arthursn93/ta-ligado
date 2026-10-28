@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privacy and terms · Tá Ligado?</title>
+  <meta name="description" content="How Tá Ligado? handles your data and the rules for using the game.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#f7f8fc">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chewy&family=Nunito:wght@600;700;800;900&display=swap">
+  <style>
+    /* Mesmas cores do style.css do jogo (tokens da paleta Playful & Friendly). */
+    :root { --fundo: #f7f8fc; --superficie: #fff; --superficie-suave: #eeedfb; --texto: #283047; --texto-suave: #5b6478; --primaria: #6558d3; --primaria-escura: #4b3fb8; --destaque: #ffd166; --sucesso: #58c98d; --perigo: #ff887a; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background-color: var(--fundo);
+      background-image:
+        radial-gradient(circle at 0% 0%, rgba(101, 88, 211, 0.1) 0, transparent 320px),
+        radial-gradient(circle at 100% 100%, rgba(88, 201, 141, 0.14) 0, transparent 360px);
+      background-attachment: fixed;
+      color: var(--texto);
+      font: 600 17px/1.6 'Nunito', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    main { max-width: 720px; margin: 0 auto; padding: 24px 16px 48px; }
+    /* Cartão com borda roxa e "sombra de carta", como os botões do jogo, e uma faixa de cores no topo. */
+    article {
+      position: relative;
+      overflow: hidden;
+      background: var(--superficie);
+      border: 3px solid var(--primaria);
+      border-radius: 24px;
+      box-shadow: 0 6px 0 var(--primaria-escura), 0 18px 40px rgba(40, 48, 71, 0.14);
+      padding: 22px 28px 28px;
+    }
+    article::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 8px;
+      background: linear-gradient(90deg, var(--primaria) 0 25%, var(--sucesso) 25% 50%, var(--destaque) 50% 75%, var(--perigo) 75%);
+    }
+    .marca {
+      display: inline-block;
+      margin: 8px 0 0;
+      font: 400 34px/1 'Chewy', 'Comic Sans MS', cursive;
+      color: #fff;
+      -webkit-text-stroke: 6px var(--primaria);
+      paint-order: stroke fill;
+      text-shadow: 0 4px 0 var(--primaria-escura);
+      transform: rotate(-2deg);
+      text-decoration: none;
+    }
+    .marca span { color: var(--destaque); }
+    h1 { margin: 18px 0 4px; color: var(--primaria); font-size: 30px; font-weight: 900; line-height: 1.2; }
+    h2 { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 900; margin: 32px 0 10px; }
+    h2::before { content: ''; flex: none; width: 12px; height: 12px; border-radius: 4px; background: var(--destaque); box-shadow: 0 0 0 3px var(--superficie-suave); transform: rotate(45deg); }
+    ul { padding-left: 0; list-style: none; }
+    li { position: relative; margin: 0 0 10px; padding: 12px 14px 12px 40px; border-radius: 14px; background: var(--fundo); }
+    li::before { content: ''; position: absolute; left: 16px; top: 22px; width: 10px; height: 10px; border-radius: 50%; background: var(--primaria); }
+    strong { font-weight: 800; }
+    a { color: var(--primaria); font-weight: 800; }
+    a:hover { color: var(--primaria-escura); }
+    a:focus-visible { outline: 3px solid var(--texto); outline-offset: 2px; border-radius: 4px; }
+    .topo { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+    .voltar {
+      display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px;
+      border-radius: 16px; background: var(--superficie); color: var(--primaria);
+      box-shadow: inset 0 0 0 2px var(--primaria), 0 4px 0 rgba(40, 48, 71, 0.12);
+      text-decoration: none;
+    }
+    .voltar:hover { color: var(--primaria-escura); background: var(--superficie-suave); }
+    .suave { font-size: 15px; color: var(--texto-suave); }
+    .idiomas { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
+    .idiomas a { flex: 0 1 auto; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 10px; border-radius: 14px; background: var(--fundo); text-decoration: none; font-size: 15px; }
+    .idiomas a[aria-current], .idiomas a[aria-current]:hover { background: var(--primaria); color: #fff; }
+    @media (max-width: 360px) { .idiomas a { flex-grow: 1; } }
+    @media (max-width: 560px) { article { padding: 18px 16px 20px; } h1 { font-size: 26px; } .marca { font-size: 28px; -webkit-text-stroke-width: 5px; } li { padding-right: 12px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="topo">
+      <a class="marca" href="/?idioma=en" aria-label="Tá Ligado?, back to the game">Tá <span>Ligado?</span></a>
+      <a class="voltar" href="/?idioma=en">← Back to the game</a>
+    </div>
+    <article>
+      <h1>Privacy and terms of use</h1>
+      <p class="suave">Last updated: October 28, 2026. This is a translation; the <a href="privacidade.html" lang="pt-BR">Portuguese version</a> is the reference.</p>
+      <nav class="idiomas" aria-label="Language of this page"><a href="privacidade.html" lang="pt-BR">Português</a> <a href="privacidade-en.html" lang="en" aria-current="page">English</a> <a href="privacidade-es.html" lang="es">Español</a></nav>
+
+      <h2>In short</h2>
+      <p>Tá Ligado? is a free game, with no sign-up and no ads. We keep the minimum needed for the match to work and delete it when the room ends. The exception is your match history, kept with no personal data other than the name you used in the room.</p>
+
+      <h2>What the game keeps</h2>
+      <ul>
+        <li><strong>The name you type:</strong> shown to the people in the same room. It stays in the server's memory only while the room exists.</li>
+        <li><strong>Chat messages:</strong> seen only by the people in the room. The server keeps the last 50 of each room, in memory only, and they disappear when the room closes (when everyone leaves or the server restarts). They are not written to disk.</li>
+        <li><strong>Match history:</strong> when an online match ends, the server keeps the team's result, the room code and time, and what each person did in it (clues given and guessed, guesses, cards played) together with the name used in the room. This is linked to a scrambled version of your device's code, which cannot be reversed, and is used only to show your stats and progress. We do not keep email, phone, IP or chat messages.</li>
+        <li><strong>For how long:</strong> match history, progress and achievements are kept with no end date, so your profile keeps showing your numbers. You can delete them at any time from inside the game (see "Your rights" below).</li>
+        <li><strong>Backup:</strong> once a day an encrypted copy of the database (with the history above) is made and kept for 30 days on GitHub. It is only used to restore the game if something goes wrong, and it can only be opened with a password held by the person responsible.</li>
+        <li><strong>Server logs:</strong> the game records technical events (for example, "a match ended" or "the server restarted") with no IP, name or room code. Render, which hosts the game, keeps these logs for a few days.</li>
+        <li><strong>On your device:</strong> the browser keeps your name, the current room and a random code that identifies the device, so you can get back to the match if the page reloads. It also keeps your preferences: language, sound on or off, board color and whether you have seen the tutorial. This stays only in your browser and you can delete it by clearing the site's data.</li>
+      </ul>
+
+      <h2>Voice</h2>
+      <p>Voice chat only turns on when you tap the button and allow the microphone. The audio goes straight between the devices in the room (WebRTC technology) and is <strong>not recorded</strong> and does not pass through our server. For the devices to find each other, they exchange network addresses using Google's public servers (STUN).</p>
+
+      <h2>Who else sees your data</h2>
+      <ul>
+        <li><strong>Render</strong>, where the game is hosted, receives your IP address like any website, and may keep it in technical logs.</li>
+        <li><strong>Neon</strong>, the database where the match history is kept.</li>
+        <li><strong>GitHub</strong>, where the encrypted backup is kept.</li>
+        <li><strong>Google Fonts</strong> delivers the game's lettering and also receives your IP address.</li>
+        <li>The game server uses your IP only to limit abuse (for example, creating too many rooms) and does not keep it.</li>
+      </ul>
+      <p>The game server and the database are in Oregon, in the United States (Render and Neon, in the AWS US West 2 region). GitHub and Google may also process data outside Brazil. In other words, when you play, your data is sent outside the country.</p>
+      <p>We do not use tracking cookies, we do not sell data and we do not advertise.</p>
+
+      <h2>Your rights</h2>
+      <p>You can find out what is kept about you, correct it or delete your history.</p>
+      <ul>
+        <li><strong>To see or delete it, inside the game:</strong> tap <strong>My profile</strong>. It shows your numbers, your latest matches and your achievements. At the bottom of the screen, <strong>Delete my data</strong> immediately deletes your history, XP, achievements and chosen items. The team's result in each match remains, without your name. If you play again, a new history starts from zero.</li>
+        <li>The button only deletes what is linked to this device and browser. If you cleared the site's data, switched browser or device, or want something else, open a conversation at the contact address below.</li>
+        <li><strong>Note:</strong> conversations on GitHub are <strong>public</strong>, anyone can read them. Write only the name you used in the rooms and roughly when you played. Do not include email, phone or other data.</li>
+        <li>Since the game has no sign-up, it does not know who you are. We may need more details about the match (for example, who you played with) to find your history.</li>
+        <li>After it is deleted, the history may still exist in the backups for up to 30 days, until they are discarded.</li>
+      </ul>
+
+      <h2>Rules of use</h2>
+      <ul>
+        <li>Be kind. Do not use the chat or voice to offend, harass or send illegal content.</li>
+        <li>Do not try to bring the server down or disrupt other people's rooms.</li>
+        <li>The game is offered as is, with no guarantee that it will always be online. Rooms may be closed at any time, for example when the server restarts.</li>
+        <li>Minors should play with their parents' or guardians' knowledge.</li>
+      </ul>
+
+      <h2>Who is responsible and contact</h2>
+      <p>Tá Ligado? is maintained by <strong>arthursn93</strong>, on GitHub, who is responsible for the game's data.</p>
+      <p>Questions or requests about your data: open a conversation at <a href="https://github.com/arthursn93/ta-ligado/issues">github.com/arthursn93/ta-ligado/issues</a>.</p>
+    </article>
+  </main>
+</body>
+</html>

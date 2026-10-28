@@ -14,6 +14,7 @@
  *   'voz:sinal'  {para, dados}       (oferta/resposta/candidato WebRTC para outro jogador da sala)
  *   'perfil'  {token}                -> {ok, perfil} | {ok:false, erro}   estatísticas e histórico do aparelho
  *   'perfil:visual' {token, tipo, id} -> {ok, perfil} | {ok:false, erro}  escolhe um item visual já liberado
+ *   'perfil:apagar' {token}          -> {ok, apagado} | {ok:false, erro}  apaga o histórico do aparelho
  * Eventos do servidor:
  *   'estado'        visão da sala e da partida do ponto de vista de cada jogador.
  *   'chat'          uma mensagem nova da sala.
@@ -93,7 +94,7 @@ const TIPOS = {
   '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.webmanifest': 'application/manifest+json'
 };
-const ARQUIVOS_SOLTOS = ['style.css', 'privacidade.html', 'favicon.svg', 'icone-180.png', 'previa.png', 'previa-2.png'];
+const ARQUIVOS_SOLTOS = ['style.css', 'privacidade.html', 'privacidade-en.html', 'privacidade-es.html', 'favicon.svg', 'icone-180.png', 'previa.png', 'previa-2.png'];
 function arquivoPublico(url) {
   let caminho;
   try { caminho = decodeURIComponent(url.split('?')[0]); } catch (e) { return null; } // URL malformada
@@ -481,6 +482,25 @@ function criarServidor(opcoes) {
         (e) => {
           log.erro('erro_escolher_visual', e);
           responder(ack, Textos.falha('servidor.erroSalvar'));
+        });
+    });
+
+    // Apaga o histórico, o XP e as conquistas deste aparelho. O código do aparelho continua o mesmo.
+    socket.on('perfil:apagar', (dados, ack) => {
+      dados = dados || {};
+      if (!armazem) return responder(ack, Textos.falha('servidor.semHistorico'));
+      if (!tokenValido(dados.token)) return responder(ack, Textos.falha('servidor.semIdentificacao'));
+      if (limitePerfil.estourou(ip)) { bloqueios.contar('perfil'); return responder(ack, Textos.falha('servidor.muitosPedidos')); }
+      limitePerfil.contar(ip);
+      armazem.apagar(dados.token).then(
+        (r) => {
+          responder(ack, { ok: true, apagado: r.apagado });
+          log.info('perfil_apagado', { havia: r.apagado });
+          if (socket.data.codigo && socket.data.token === dados.token) atualizarSelo(socket.data.codigo, dados.token, true);
+        },
+        (e) => {
+          log.erro('erro_apagar_perfil', e);
+          responder(ack, Textos.falha('servidor.erroApagar'));
         });
     });
 

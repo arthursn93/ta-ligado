@@ -182,6 +182,11 @@ var TextosEn = {
   'perfil.histInterrompida': 'interrupted',
   'perfil.histSaiu': 'you left early',
   'perfil.salvoNavegador': 'Your progress is saved in this browser. On another device, another browser or a private tab it starts from zero.',
+  'perfil.apagar': 'Delete my data',
+  'perfil.apagarPergunta': 'Delete your history, XP, achievements and chosen items? This can\'t be undone.',
+  'perfil.apagarSim': 'Yes, delete everything',
+  'perfil.apagarNao': 'Cancel',
+  'perfil.apagado': 'Done: your data was deleted. If you play again, a new history starts from zero.',
   'perfil.fechar': 'Close profile',
   'perfil.carregando': 'Loading your profile…',
   'perfil.indisponivel': 'Profile unavailable',
@@ -335,7 +340,8 @@ var TextosEn = {
   'servidor.tipoItemInvalido': 'Invalid item type.',
   'servidor.itemNaoEncontrado': 'Item not found.',
   'servidor.itemBloqueado': 'That item is still locked.',
-  'servidor.erroSalvar': 'Couldn\'t save right now.'
+  'servidor.erroSalvar': 'Couldn\'t save right now.',
+  'servidor.erroApagar': 'Couldn\'t delete right now. Try again in a moment.'
 };
 
 if (typeof module !== 'undefined' && module.exports) module.exports = TextosEn;

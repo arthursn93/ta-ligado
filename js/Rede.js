@@ -147,6 +147,7 @@ var Rede = (function () {
       progresso: function () { return (estado && estado.progresso) || null; },
       perfil: function () { return pedir('perfil', { token: token }); },
       escolherVisual: function (tipo, id) { return pedir('perfil:visual', { token: token, tipo: tipo, id: id }); },
+      apagarDados: function () { return pedir('perfil:apagar', { token: token }); },
 
       // Chat e voz (Social.js)
       emitir: pedir,
