@@ -153,6 +153,15 @@ function origemPublica(req) {
   return proto + '://' + req.headers.host;
 }
 
+const PAGINAS_PUBLICAS = ['/', '/privacidade.html', '/privacidade-en.html', '/privacidade-es.html'];
+function textoRobots(origem) {
+  return 'User-agent: *\nAllow: /\nDisallow: /socket.io/\n\nSitemap: ' + origem + '/sitemap.xml\n';
+}
+function textoSitemap(origem) {
+  return '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
+    PAGINAS_PUBLICAS.map((p) => '  <url><loc>' + origem + p + '</loc></url>\n').join('') + '</urlset>\n';
+}
+
 /** IP de quem conectou. No Render o IP real vem no primeiro item de X-Forwarded-For. */
 function ipDe(req) {
   const encaminhado = req.headers['x-forwarded-for'];
@@ -275,6 +284,17 @@ function criarServidor(opcoes) {
     if (req.url === '/saude') {
       res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' });
       res.end('ok');
+      return;
+    }
+    // Para buscadores: o que pode ser lido e quais páginas existem.
+    const caminho = (req.url || '/').split('?')[0];
+    if (req.method === 'GET' && (caminho === '/robots.txt' || caminho === '/sitemap.xml')) {
+      const robots = caminho === '/robots.txt';
+      res.writeHead(200, Object.assign({
+        'Content-Type': robots ? 'text/plain; charset=utf-8' : 'application/xml; charset=utf-8',
+        'Cache-Control': 'public, max-age=3600'
+      }, CABECALHOS_SEGURANCA));
+      res.end(robots ? textoRobots(origemPublica(req)) : textoSitemap(origemPublica(req)));
       return;
     }
     const arquivo = arquivoPublico(req.url || '/');
