@@ -92,7 +92,7 @@ function sinalValido(dados) {
 // Só estes arquivos são servidos; nada do servidor nem do repositório vaza.
 const TIPOS = {
   '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
-  '.svg': 'image/svg+xml', '.png': 'image/png', '.webmanifest': 'application/manifest+json'
+  '.svg': 'image/svg+xml', '.png': 'image/png', '.webmanifest': 'application/manifest+json', '.woff2': 'font/woff2'
 };
 const ARQUIVOS_SOLTOS = ['style.css', 'privacidade.html', 'privacidade-en.html', 'privacidade-es.html', 'favicon.svg', 'icone-180.png', 'previa.png', 'previa-2.png'];
 function arquivoPublico(url) {
@@ -101,10 +101,12 @@ function arquivoPublico(url) {
   if (caminho === '/' || caminho === '/index.html') return 'index.html';
   if (ARQUIVOS_SOLTOS.indexOf(caminho.slice(1)) !== -1) return caminho.slice(1);
   const js = /^\/js\/([A-Za-z]+\.js)$/.exec(caminho);
-  return js ? 'js/' + js[1] : null;
+  if (js) return 'js/' + js[1];
+  const fonte = /^\/fontes\/([a-z0-9-]+\.woff2)$/.exec(caminho);
+  return fonte ? 'fontes/' + fonte[1] : null;
 }
 
-// Cabeçalhos de segurança: o jogo só carrega o que é dele (mais as fontes do Google).
+// Cabeçalhos de segurança: o jogo só carrega o que é dele.
 const CABECALHOS_SEGURANCA = {
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
@@ -113,8 +115,8 @@ const CABECALHOS_SEGURANCA = {
   'Content-Security-Policy': [
     "default-src 'self'",
     "script-src 'self'",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src https://fonts.gstatic.com",
+    "style-src 'self' 'unsafe-inline'",
+    "font-src 'self'",
     "img-src 'self' data:",
     "connect-src 'self'",
     "media-src 'self' blob:",
@@ -288,7 +290,9 @@ function criarServidor(opcoes) {
         corpo = Buffer.from(corpo.toString('utf8').split('{{ORIGEM}}').join(origemPublica(req)));
         gzip = zlib.gzipSync(corpo);
       }
-      const cabecalhos = Object.assign({ 'Content-Type': TIPOS[path.extname(arquivo)], 'Cache-Control': 'no-cache', Vary: 'Accept-Encoding' }, CABECALHOS_SEGURANCA);
+      // Fontes não mudam (um arquivo novo ganha outro nome): o navegador guarda por um ano.
+      const cache = arquivo.startsWith('fontes/') ? 'public, max-age=31536000, immutable' : 'no-cache';
+      const cabecalhos = Object.assign({ 'Content-Type': TIPOS[path.extname(arquivo)], 'Cache-Control': cache, Vary: 'Accept-Encoding' }, CABECALHOS_SEGURANCA);
       if (gzip && /\bgzip\b/.test(req.headers['accept-encoding'] || '')) {
         cabecalhos['Content-Encoding'] = 'gzip';
         corpo = gzip;

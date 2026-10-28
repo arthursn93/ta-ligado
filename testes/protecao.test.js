@@ -53,6 +53,31 @@ test('arquivos novos, compressão e cabeçalhos de segurança', async (t) => {
   assert.equal(semGzip.headers['content-encoding'], undefined);
 });
 
+test('fontes: servidas pelo próprio jogo, guardadas por um ano, sem Google Fonts', async (t) => {
+  const srv = await subir();
+  t.after(() => srv.io.close());
+  for (const fonte of ['/fontes/nunito.woff2', '/fontes/chewy.woff2']) {
+    const r = await pedirHttp(srv.porta, fonte, { 'Accept-Encoding': 'gzip' });
+    assert.equal(r.status, 200, fonte);
+    assert.equal(r.headers['content-type'], 'font/woff2');
+    assert.match(r.headers['cache-control'], /max-age=31536000/);
+    assert.equal(r.headers['content-encoding'], undefined, 'woff2 já vem comprimido');
+    assert.equal(r.corpo.subarray(0, 4).toString('latin1'), 'wOF2');
+  }
+  for (const fora of ['/fontes/LEIAME.md', '/fontes/LICENCA-nunito.txt', '/fontes/../server/index.js', '/fontes/x.woff2']) {
+    assert.equal((await pedirHttp(srv.porta, fora)).status, 404, fora);
+  }
+  const pagina = await pedirHttp(srv.porta, '/');
+  assert.match(pagina.headers['content-security-policy'], /font-src 'self'/);
+  assert.doesNotMatch(pagina.headers['content-security-policy'], /google/);
+  assert.equal(pagina.headers['cache-control'], 'no-cache', 'páginas continuam sem cache');
+  const fs = require('fs');
+  const path = require('path');
+  for (const arquivo of ['index.html', 'style.css', 'privacidade.html', 'privacidade-en.html', 'privacidade-es.html']) {
+    assert.doesNotMatch(fs.readFileSync(path.join(__dirname, '..', arquivo), 'utf8'), /fonts\.(googleapis|gstatic)\.com/, arquivo);
+  }
+});
+
 test('origem: aceita o próprio site e as liberadas, recusa as outras', async (t) => {
   const req = (origin) => ({ headers: { host: 'ta-ligado.onrender.com', origin } });
   assert.ok(origemPermitida(req(undefined), {}));

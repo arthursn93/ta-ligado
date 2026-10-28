@@ -11,6 +11,22 @@
    Verde, coral e amarelo claros são só fundo de peça com texto grafite; para texto branco ou
    texto colorido sobre fundo claro existem os tons "-forte". */
 
+/* Letras servidas pelo próprio jogo (pasta fontes/), sem Google Fonts. */
+@font-face {
+  font-family: 'Nunito';
+  font-style: normal;
+  font-weight: 200 1000;
+  font-display: swap;
+  src: url(fontes/nunito.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Chewy';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(fontes/chewy.woff2) format('woff2');
+}
+
 :root {
   --fonte: 'Nunito', 'Trebuchet MS', system-ui, sans-serif;
   --fonte-letra: var(--fonte);
