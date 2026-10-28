@@ -7,10 +7,23 @@
   <meta name="description" content="Cómo Tá Ligado? trata tus datos y las reglas de uso del juego.">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <meta name="theme-color" content="#f7f8fc">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chewy&family=Nunito:wght@600;700;800;900&display=swap">
+  <link rel="preload" href="fontes/nunito.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fontes/chewy.woff2" as="font" type="font/woff2" crossorigin>
   <style>
+    @font-face {
+      font-family: 'Nunito';
+      font-style: normal;
+      font-weight: 200 1000;
+      font-display: swap;
+      src: url(fontes/nunito.woff2) format('woff2');
+    }
+    @font-face {
+      font-family: 'Chewy';
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url(fontes/chewy.woff2) format('woff2');
+    }
     /* Mesmas cores do style.css do jogo (tokens da paleta Playful & Friendly). */
     :root { --fundo: #f7f8fc; --superficie: #fff; --superficie-suave: #eeedfb; --texto: #283047; --texto-suave: #5b6478; --primaria: #6558d3; --primaria-escura: #4b3fb8; --destaque: #ffd166; --sucesso: #58c98d; --perigo: #ff887a; }
     * { box-sizing: border-box; }
@@ -113,7 +126,6 @@
         <li><strong>Render</strong>, donde está alojado el juego, recibe tu dirección IP como cualquier sitio, y puede guardarla en registros técnicos.</li>
         <li><strong>Neon</strong>, la base de datos donde se guarda el historial de partidas.</li>
         <li><strong>GitHub</strong>, donde está la copia de seguridad cifrada.</li>
-        <li><strong>Google Fonts</strong> entrega las letras del juego y también recibe tu dirección IP.</li>
         <li>El servidor del juego usa tu IP solo para limitar abusos (por ejemplo, crear demasiadas salas) y no la guarda.</li>
       </ul>
       <p>El servidor del juego y la base de datos están en Oregón, en Estados Unidos (Render y Neon, en la región AWS US West 2). GitHub y Google también pueden tratar datos fuera de Brasil. Es decir, al jugar, tus datos se envían fuera del país.</p>
