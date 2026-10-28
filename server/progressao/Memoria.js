@@ -15,6 +15,7 @@ function criar() {
   const xps = new Map(); // tokenHash -> XP total
   const conquistas = new Map(); // tokenHash -> [{id, em}]
   const visuais = new Map(); // tokenHash -> {tipo: id}
+  const metricas = new Map(); // 'dia|evento' -> total
 
   return {
     pronto: () => Promise.resolve(),
@@ -64,6 +65,18 @@ function criar() {
       for (let i = linhas.length - 1; i >= 0; i--) if (linhas[i].tokenHash === h) linhas.splice(i, 1);
       [nomes, xps, conquistas, visuais].forEach((m) => m.delete(h));
       return { apagado: tinha };
+    },
+    async somarMetricas(lista) {
+      for (const l of lista) {
+        const chave = l.dia + '|' + l.evento;
+        metricas.set(chave, (metricas.get(chave) || 0) + l.total);
+      }
+    },
+    async lerMetricas(desde) {
+      return [...metricas]
+        .map(([chave, total]) => { const [dia, evento] = chave.split('|'); return { dia, evento, total }; })
+        .filter((l) => l.dia >= desde)
+        .sort((a, b) => (a.dia === b.dia ? (a.evento < b.evento ? -1 : 1) : (a.dia < b.dia ? 1 : -1)));
     },
     fechar: () => Promise.resolve()
   };

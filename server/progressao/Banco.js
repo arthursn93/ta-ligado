@@ -199,8 +199,30 @@ function criar(url) {
     return { apagado: r.rowCount > 0 };
   }
 
+  /** Soma os contadores do dia (Metricas.js). Uma linha por dia e evento; somar de novo acumula. */
+  async function somarMetricas(linhas) {
+    await migrado;
+    if (!linhas.length) return;
+    await pool.query(
+      `INSERT INTO metricas_diarias (dia, evento, total)
+       SELECT * FROM unnest($1::date[], $2::text[], $3::int[])
+       ON CONFLICT (dia, evento) DO UPDATE SET total = metricas_diarias.total + EXCLUDED.total`,
+      [linhas.map((l) => l.dia), linhas.map((l) => l.evento), linhas.map((l) => l.total)]);
+  }
+
+  /** Contadores de `desde` ('AAAA-MM-DD') em diante, do dia mais recente para o mais antigo. */
+  async function lerMetricas(desde) {
+    await migrado;
+    const r = await pool.query(
+      `SELECT to_char(dia, 'YYYY-MM-DD') AS dia, evento, total FROM metricas_diarias
+        WHERE dia >= $1::date ORDER BY dia DESC, evento`, [desde]);
+    return r.rows;
+  }
+
   return {
     pronto: () => migrado,
+    somarMetricas,
+    lerMetricas,
     gravarPartida,
     perfil,
     selo,

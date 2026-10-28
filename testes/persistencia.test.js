@@ -237,6 +237,22 @@ function contrato(nome, fabricar) {
       await a.fechar();
     }
   });
+
+  test(nome + ': contadores do dia somam e acumulam', async () => {
+    const a = await fabricar();
+    try {
+      await a.somarMetricas([{ dia: '2026-10-27', evento: 'abriu', total: 3 }, { dia: '2026-10-28', evento: 'abriu', total: 1 }]);
+      await a.somarMetricas([{ dia: '2026-10-28', evento: 'abriu', total: 2 }, { dia: '2026-10-28', evento: 'sala_criada', total: 1 }]);
+      await a.somarMetricas([]);
+      assert.deepEqual(await a.lerMetricas('2026-10-28'), [
+        { dia: '2026-10-28', evento: 'abriu', total: 3 },
+        { dia: '2026-10-28', evento: 'sala_criada', total: 1 }
+      ]);
+      assert.equal((await a.lerMetricas('2026-01-01')).length, 3);
+    } finally {
+      await a.fechar();
+    }
+  });
 }
 
 contrato('memória', async () => Memoria.criar());
@@ -246,7 +262,7 @@ if (process.env.TEST_DATABASE_URL) {
   const Banco = require('../server/progressao/Banco.js');
   async function bancoLimpo() {
     const pool = new Pool({ connectionString: process.env.TEST_DATABASE_URL });
-    await pool.query('DROP TABLE IF EXISTS conquistas_jogador, partida_jogadores, partidas, jogadores, migracoes');
+    await pool.query('DROP TABLE IF EXISTS metricas_diarias, conquistas_jogador, partida_jogadores, partidas, jogadores, migracoes');
     await pool.end();
     const b = Banco.criar(process.env.TEST_DATABASE_URL);
     await b.pronto();

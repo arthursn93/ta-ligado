@@ -15,6 +15,8 @@
  *   'perfil'  {token}                -> {ok, perfil} | {ok:false, erro}   estatísticas e histórico do aparelho
  *   'perfil:visual' {token, tipo, id} -> {ok, perfil} | {ok:false, erro}  escolhe um item visual já liberado
  *   'perfil:apagar' {token}          -> {ok, apagado} | {ok:false, erro}  apaga o histórico do aparelho
+ *   'metricas:abriu' {idioma, convite, voltou}   a tela inicial carregou (só soma contadores do dia)
+ *   'metricas:local'                 -> {ok}  começou o modo local (só soma o contador do dia)
  * Eventos do servidor:
  *   'estado'        visão da sala e da partida do ponto de vista de cada jogador.
  *   'chat'          uma mensagem nova da sala.
@@ -32,6 +34,7 @@ const path = require('path');
 const zlib = require('zlib');
 const { Server } = require('socket.io');
 const { criarGerenciador } = require('./Salas.js');
+const Metricas = require('./Metricas.js');
 const Log = require('./log.js');
 const Textos = require('../js/Textos.js');
 
@@ -198,6 +201,8 @@ function criarServidor(opcoes) {
   const esperaAviso = opcoes.esperaAviso || ESPERA_AVISO_MS;
   const gravacoes = new Set();
   const log = opcoes.log || Log.padrao;
+  // Contadores diários de uso (só números). Sem armazém, não contam nada.
+  const metricas = Metricas.criar({ armazem, log, intervaloMs: opcoes.intervaloMetricas });
 
   /** Grava a partida que acabou. A gravação é idempotente, então tentar de novo é seguro. */
   function gravarPartida(resumo) {
@@ -249,6 +254,7 @@ function criarServidor(opcoes) {
   /** Registra no log como a partida terminou (só números) e grava a progressão. */
   function partidaEncerrada(resumo) {
     log.info('partida_encerrada', { estado: resumo.estado, jogadores: resumo.jogadores.length, cartas: resumo.tentativas });
+    metricas.contar(resumo.estado === 'concluida' ? 'partida_concluida' : 'partida_interrompida');
     gravarPartida(resumo);
   }
 
@@ -394,6 +400,7 @@ function criarServidor(opcoes) {
       entrarNoCanal(r.sala, String(dados.token));
       atualizarSelo(r.sala.codigo, String(dados.token), true);
       log.info('sala_criada', { salas: salas.total() });
+      metricas.contar('sala_criada');
     });
 
     socket.on('entrar', (dados, ack) => {
@@ -409,6 +416,30 @@ function criarServidor(opcoes) {
       responder(ack, { ok: true, codigo: r.sala.codigo });
       entrarNoCanal(r.sala, String(dados.token));
       atualizarSelo(r.sala.codigo, String(dados.token), true);
+      // Só quem chega pela primeira vez: voltar depois de recarregar a página não conta.
+      if (r.novo) metricas.contar('entrou_na_sala');
+    });
+
+    // A tela inicial carregou. Conta uma vez por conexão; `voltou` é só sim ou não (o navegador
+    // guarda a data da última visita e não manda mais nada).
+    socket.on('metricas:abriu', (dados) => {
+      if (socket.data.abriu) return;
+      socket.data.abriu = true;
+      dados = dados || {};
+      metricas.contar('abriu');
+      if (['pt', 'en', 'es'].indexOf(dados.idioma) !== -1) metricas.contar('abriu_' + dados.idioma);
+      if (dados.convite === true) metricas.contar('abriu_convite');
+      if (dados.voltou === true) metricas.contar('abriu_voltou');
+    });
+
+    // Começou o modo local (o jogo num aparelho só). Também uma vez por conexão.
+    socket.on('metricas:local', (_dados, ack) => {
+      if (typeof _dados === 'function') ack = _dados;
+      if (!socket.data.local) {
+        socket.data.local = true;
+        metricas.contar('partida_local');
+      }
+      responder(ack, { ok: true });
     });
 
     socket.on('sala:idioma', (dados, ack) => {
@@ -424,6 +455,7 @@ function criarServidor(opcoes) {
       if (!r.ok) return;
       transmitir(r.sala);
       log.info('partida_iniciada', { jogadores: r.sala.jogadores.filter((j) => j.online).length });
+      metricas.contar('partida_iniciada');
     });
 
     socket.on('acao', (dados, ack) => {
@@ -572,6 +604,7 @@ function criarServidor(opcoes) {
       servidorHttp.close();
       bloqueios.parar();
       await aguardarGravacoes();
+      await metricas.parar();
       try {
         if (armazem && armazem.fechar) await armazem.fechar();
       } catch (e) {
@@ -582,7 +615,7 @@ function criarServidor(opcoes) {
     return encerramento;
   }
 
-  return { servidorHttp, io, salas, aguardarGravacoes, encerrar };
+  return { servidorHttp, io, salas, aguardarGravacoes, encerrar, metricas };
 }
 
 module.exports = { criarServidor, servidoresIce, sinalValido, arquivoPublico, origemPermitida, LIMITES };
