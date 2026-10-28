@@ -48,8 +48,36 @@
     var botao = ev.target.closest('[data-main]');
     if (!botao) return;
     if (botao.getAttribute('data-main') === 'tentar') window.location.reload();
-    else { desistir(); jogarLocal(); }
+    else avisarLocal(function () { desistir(); jogarLocal(); });
   });
+
+  // Contadores de uso: o servidor só soma números do dia, sem saber quem é.
+  var CHAVE_ULTIMA_VISITA = 'taligado.ultimaVisita';
+  function hoje() {
+    var d = new Date();
+    return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+  }
+  /** Conta a abertura da tela. `voltou` = este navegador já tinha aberto o jogo em outro dia. */
+  function avisarAbertura() {
+    var ultima = null;
+    try {
+      ultima = window.localStorage.getItem(CHAVE_ULTIMA_VISITA);
+      window.localStorage.setItem(CHAVE_ULTIMA_VISITA, hoje());
+    } catch (e) { /* sem armazenamento: conta como primeira visita */ }
+    socket.emit('metricas:abriu', {
+      idioma: Textos.idioma(),
+      convite: /[?&]sala=/.test(window.location.search),
+      voltou: !!ultima && ultima !== hoje()
+    });
+  }
+  /** Conta o início do modo local antes de fechar a conexão; sem conexão, só segue. */
+  function avisarLocal(seguir) {
+    if (!socket || !socket.connected) { seguir(); return; }
+    var feito = false;
+    function uma() { if (!feito) { feito = true; seguir(); } }
+    socket.emit('metricas:local', uma);
+    setTimeout(uma, 500);
+  }
 
   var socket = null;
   var rede = null;
@@ -67,6 +95,7 @@
     if (comecou) return;
     comecou = true;
     clearTimeout(relogio);
+    avisarAbertura();
     function voltarAoInicio(aviso) {
       var busca = (aviso ? '&aviso=' + aviso : '') + Idioma.noEndereco();
       window.location.href = window.location.pathname + (busca ? '?' + busca.slice(1) : '');
@@ -74,7 +103,7 @@
     Lobby.criar(raiz, rede, {
       social: social,
       som: som,
-      aoJogarLocal: function () { desistir(); jogarLocal(); },
+      aoJogarLocal: function () { avisarLocal(function () { desistir(); jogarLocal(); }); },
       aoComecar: function () {
         UI.criar(raiz, rede, {
           online: true,

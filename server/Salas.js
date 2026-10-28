@@ -102,7 +102,7 @@ function criarGerenciador(opcoes) {
       return erro('servidor.nomeRepetido');
     }
     novoJogador(sala, token, nome);
-    return { ok: true, sala };
+    return { ok: true, sala, novo: true };
   }
 
   /** Marca o jogador como desconectado. Ele continua na sala e pode voltar. */

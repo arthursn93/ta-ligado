@@ -69,6 +69,26 @@ O que nunca entra nos logs: nomes de jogadores, códigos de sala, mensagens do c
 
 Por quanto tempo o Render guarda os logs depende do plano do **workspace**, não do serviço: 7 dias no Hobby, 14 no Pro e 30 no Scale/Enterprise, segundo a [documentação do Render](https://render.com/docs/logging) (consultada em outubro de 2026). Este projeto usa a instância **Free**, num workspace **Hobby** (o único plano de workspace de $0, segundo os [preços do Render](https://render.com/pricing)): os logs ficam **7 dias**. Se o workspace mudar de plano, o prazo muda junto. Logs mais antigos que isso não ficam disponíveis.
 
+### Contadores de uso
+
+Para saber se o jogo está sendo usado, o servidor soma contadores por dia (horário de Brasília) e guarda os totais na tabela `metricas_diarias` do banco, a cada minuto e ao desligar. Sem `DATABASE_URL`, nada é contado. A lista é fixa, em `server/Metricas.js`:
+
+| Contador | Soma 1 quando |
+| --- | --- |
+| `abriu`, `abriu_pt`, `abriu_en`, `abriu_es` | A tela inicial carrega (uma vez por carregamento), no idioma da tela |
+| `abriu_convite` | A tela carrega por um link de convite |
+| `abriu_voltou` | O navegador já tinha aberto o jogo em outro dia (ele guarda só a data da última visita e manda sim ou não) |
+| `sala_criada`, `entrou_na_sala` | Alguém cria uma sala ou entra pela primeira vez numa sala que já existe (voltar depois de recarregar não conta) |
+| `partida_iniciada`, `partida_concluida`, `partida_interrompida` | Uma partida online começa ou termina |
+| `partida_local` | Alguém começa o modo local com o servidor conectado |
+
+Nada que identifique alguém entra na tabela: só o dia, o nome do contador e o total. Para ver os últimos 14 dias, no SQL Editor do Neon (só lê):
+
+```sql
+SELECT dia, evento, total FROM metricas_diarias
+WHERE dia > current_date - 14 ORDER BY dia DESC, evento;
+```
+
 ### Proteções do servidor
 
 - Cada endereço de IP pode ter até 60 conexões ao mesmo tempo, criar até 10 salas por minuto e errar o código da sala até 10 vezes por minuto (os números ficam em `LIMITES`, no `server/index.js`).
@@ -147,6 +167,7 @@ Abra o `index.html` direto no navegador (dois cliques, sem servidor) e o aparelh
 | `server/index.js` | Servidor HTTP + Socket.io. Serve só os arquivos do jogo, com limites contra abuso. |
 | `server/Salas.js` | Salas por código, anfitrião, rodízio do dador, permissões e reconexão. |
 | `server/log.js` | Logs em JSON, uma linha por evento, sem dados pessoais. |
+| `server/Metricas.js` | Contadores diários de uso, só totais por dia (veja "Contadores de uso"). |
 | `server/progressao/Partida.js` | Estatísticas de cada partida online (acertos, erros, sequência, pistas de cada dador), contadas no servidor. |
 | `server/progressao/Banco.js` | Grava as partidas no PostgreSQL e lê o perfil de cada aparelho. Aplica as migrações de `server/progressao/migracoes/` na subida. |
 | `server/progressao/Memoria.js` | O mesmo que o `Banco.js`, só em memória (testes e jogo em casa). |
