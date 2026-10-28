@@ -185,6 +185,11 @@ var TextosPt = {
   'perfil.histInterrompida': 'interrompida',
   'perfil.histSaiu': 'você saiu antes',
   'perfil.salvoNavegador': 'Seu progresso fica salvo neste navegador. Em outro aparelho, em outro navegador ou numa aba anônima ele começa do zero.',
+  'perfil.apagar': 'Apagar meus dados',
+  'perfil.apagarPergunta': 'Apagar seu histórico, XP, conquistas e itens escolhidos? Não dá para desfazer.',
+  'perfil.apagarSim': 'Sim, apagar tudo',
+  'perfil.apagarNao': 'Cancelar',
+  'perfil.apagado': 'Pronto: seus dados foram apagados. Se você jogar de novo, um histórico novo começa do zero.',
   'perfil.fechar': 'Fechar perfil',
   'perfil.carregando': 'Carregando seu perfil…',
   'perfil.indisponivel': 'Perfil indisponível',
@@ -338,7 +343,8 @@ var TextosPt = {
   'servidor.tipoItemInvalido': 'Tipo de item inválido.',
   'servidor.itemNaoEncontrado': 'Item não encontrado.',
   'servidor.itemBloqueado': 'Esse item ainda está bloqueado.',
-  'servidor.erroSalvar': 'Não deu para salvar agora.'
+  'servidor.erroSalvar': 'Não deu para salvar agora.',
+  'servidor.erroApagar': 'Não deu para apagar agora. Tente de novo daqui a pouco.'
 };
 
 if (typeof module !== 'undefined' && module.exports) module.exports = TextosPt;

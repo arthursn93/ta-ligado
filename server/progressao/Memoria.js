@@ -58,6 +58,13 @@ function criar() {
       visuais.set(h, r.escolhido);
       return { perfil: await this.perfil(token) };
     },
+    async apagar(token) {
+      const h = Perfil.hashToken(token);
+      const tinha = nomes.has(h);
+      for (let i = linhas.length - 1; i >= 0; i--) if (linhas[i].tokenHash === h) linhas.splice(i, 1);
+      [nomes, xps, conquistas, visuais].forEach((m) => m.delete(h));
+      return { apagado: tinha };
+    },
     fechar: () => Promise.resolve()
   };
 }

@@ -182,6 +182,11 @@ var TextosEs = {
   'perfil.histInterrompida': 'interrumpida',
   'perfil.histSaiu': 'saliste antes',
   'perfil.salvoNavegador': 'Tu progreso se guarda en este navegador. En otro dispositivo, otro navegador o una pestaña privada empieza desde cero.',
+  'perfil.apagar': 'Borrar mis datos',
+  'perfil.apagarPergunta': '¿Borrar tu historial, XP, logros y objetos elegidos? No se puede deshacer.',
+  'perfil.apagarSim': 'Sí, borrar todo',
+  'perfil.apagarNao': 'Cancelar',
+  'perfil.apagado': 'Listo: tus datos se borraron. Si vuelves a jugar, un historial nuevo empieza desde cero.',
   'perfil.fechar': 'Cerrar perfil',
   'perfil.carregando': 'Cargando tu perfil…',
   'perfil.indisponivel': 'Perfil no disponible',
@@ -335,7 +340,8 @@ var TextosEs = {
   'servidor.tipoItemInvalido': 'Tipo de objeto no válido.',
   'servidor.itemNaoEncontrado': 'Objeto no encontrado.',
   'servidor.itemBloqueado': 'Ese objeto todavía está bloqueado.',
-  'servidor.erroSalvar': 'No se pudo guardar ahora.'
+  'servidor.erroSalvar': 'No se pudo guardar ahora.',
+  'servidor.erroApagar': 'No se pudo borrar ahora. Inténtalo de nuevo en un momento.'
 };
 
 if (typeof module !== 'undefined' && module.exports) module.exports = TextosEs;

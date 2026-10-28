@@ -213,6 +213,14 @@ var Progresso = (function () {
     }
 
     html += '<p class="suave perfil-nota">' + t('perfil.salvoNavegador') + '</p>';
+    if (p.nome) {
+      html += '<div class="perfil-apagar">' +
+        '<button type="button" class="botao botao-fantasma botao-pequeno" data-perfil="apagar">' + t('perfil.apagar') + '</button>' +
+        '<div class="perfil-confirmar" hidden><p>' + t('perfil.apagarPergunta') + '</p>' +
+        '<button type="button" class="botao botao-perigo botao-pequeno" data-perfil="apagar-sim">' + t('perfil.apagarSim') + '</button> ' +
+        '<button type="button" class="botao botao-fantasma botao-pequeno" data-perfil="apagar-nao">' + t('perfil.apagarNao') + '</button></div>' +
+        '</div>';
+    }
     return html;
   }
 
@@ -246,6 +254,7 @@ var Progresso = (function () {
 
     camada.addEventListener('click', function (ev) {
       if (ev.target === camada || ev.target.closest('[data-perfil="fechar"]')) { fechar(); return; }
+      if (ev.target.closest('[data-perfil^="apagar"]')) { apagar(ev.target.closest('[data-perfil]').getAttribute('data-perfil')); return; }
       var item = ev.target.closest('[data-item-id]');
       if (!item || item.disabled || ocupado) return;
       ocupado = true;
@@ -265,6 +274,44 @@ var Progresso = (function () {
       });
     });
     document.addEventListener('keydown', teclado);
+
+    /** "Apagar meus dados": pede confirmação na própria tela e só então chama o servidor. */
+    function apagar(passo) {
+      var confirmar = conteudo.querySelector('.perfil-confirmar');
+      var botao = conteudo.querySelector('[data-perfil="apagar"]');
+      if (passo === 'apagar') {
+        confirmar.hidden = false;
+        botao.hidden = true;
+        conteudo.querySelector('[data-perfil="apagar-nao"]').focus();
+        return;
+      }
+      if (passo === 'apagar-nao') {
+        confirmar.hidden = true;
+        botao.hidden = false;
+        botao.focus();
+        return;
+      }
+      if (ocupado) return;
+      ocupado = true;
+      rede.apagarDados().then(function (r) {
+        if (!r.ok) {
+          ocupado = false;
+          var erro = conteudo.querySelector('.erro-campo');
+          if (erro) erro.textContent = r.erro;
+          return;
+        }
+        // Os itens escolhidos foram apagados junto: o tabuleiro volta ao padrão.
+        if (typeof Theme !== 'undefined') Theme.aplicar('padrao');
+        return rede.perfil().then(function (novo) {
+          ocupado = false;
+          if (!camada.isConnected) return;
+          if (novo.ok) mostrar(novo.perfil);
+          conteudo.insertAdjacentHTML('afterbegin', '<p class="perfil-aviso" role="status" tabindex="-1">' + t('perfil.apagado') + '</p>');
+          conteudo.querySelector('.perfil-aviso').focus();
+          camada.scrollTop = 0;
+        });
+      });
+    }
 
     rede.perfil().then(function (r) {
       if (!camada.isConnected) return;

@@ -7,6 +7,12 @@ var Lobby = (function () {
 
   var t = Textos.t;
 
+  /** A página de privacidade no idioma da interface (a em português é a de referência). */
+  function paginaPrivacidade() {
+    var idioma = Textos.idioma();
+    return idioma === 'pt' ? 'privacidade.html' : 'privacidade-' + idioma + '.html';
+  }
+
   function esc(texto) {
     return String(texto).replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
@@ -52,7 +58,7 @@ var Lobby = (function () {
       '    <button type="button" class="botao botao-fantasma" data-lobby="local">' + t('geral.jogarLocal') + '</button>',
       '  </div>',
       Idioma.botao(),
-      '  <a class="lobby-rodape" href="privacidade.html">' + t('lobby.privacidade') + '</a>',
+      '  <a class="lobby-rodape" href="' + paginaPrivacidade() + '">' + t('lobby.privacidade') + '</a>',
       '</div>'
     ].join('');
   }

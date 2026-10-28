@@ -189,12 +189,23 @@ function criar(url) {
     return { perfil: await perfil(token) };
   }
 
+  /**
+   * Apaga tudo o que está ligado a este aparelho: o jogador, o que ele fez em cada partida e as
+   * conquistas (ON DELETE CASCADE). O resultado das partidas, que não tem nome de ninguém, fica.
+   */
+  async function apagar(token) {
+    await migrado;
+    const r = await pool.query('DELETE FROM jogadores WHERE token_hash = $1', [Perfil.hashToken(token)]);
+    return { apagado: r.rowCount > 0 };
+  }
+
   return {
     pronto: () => migrado,
     gravarPartida,
     perfil,
     selo,
     escolherVisual,
+    apagar,
     fechar: () => pool.end()
   };
 }

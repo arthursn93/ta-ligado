@@ -39,7 +39,7 @@ test('URL malformada dá 404 e o servidor continua de pé', async (t) => {
 test('arquivos novos, compressão e cabeçalhos de segurança', async (t) => {
   const srv = await subir();
   t.after(() => srv.io.close());
-  for (const arquivo of ['/privacidade.html', '/favicon.svg', '/icone-180.png', '/previa.png', '/previa-2.png', '/socket.io/socket.io.min.js']) {
+  for (const arquivo of ['/privacidade.html', '/privacidade-en.html', '/privacidade-es.html', '/favicon.svg', '/icone-180.png', '/previa.png', '/previa-2.png', '/socket.io/socket.io.min.js']) {
     assert.equal((await pedirHttp(srv.porta, arquivo)).status, 200, arquivo);
   }
   const pagina = await pedirHttp(srv.porta, '/', { 'Accept-Encoding': 'gzip', 'X-Forwarded-Proto': 'https' });
@@ -166,8 +166,22 @@ test('privacidade: conta backup, prazo, onde ficam os dados, direitos e respons�
     'por até 30 dias',
     '<h2>Responsável e contato</h2>',
     'mantido por <strong>arthursn93</strong>',
-    'https://github.com/arthursn93/ta-ligado/issues'
+    'https://github.com/arthursn93/ta-ligado/issues',
+    '<strong>Apagar meus dados</strong>',
+    'cor do tabuleiro'
   ]) assert.ok(html.includes(trecho), 'falta: ' + trecho);
+  // As versões em inglês e espanhol têm as mesmas partes, os mesmos links e o nome certo do botão.
+  const titulos = (h) => (h.match(/<h2>/g) || []).length;
+  const links = (h) => [...new Set((h.match(/href="[^"]+"/g) || []).filter((l) => !l.includes('?idioma=') && l !== 'href="/"'))].sort();
+  for (const [idioma, botao] of [['en', 'Delete my data'], ['es', 'Borrar mis datos']]) {
+    const traducao = fs.readFileSync(path.join(__dirname, '..', 'privacidade-' + idioma + '.html'), 'utf8');
+    assert.ok(traducao.includes('<html lang="' + idioma + '">'), idioma);
+    assert.equal(titulos(traducao), titulos(html), idioma);
+    assert.deepEqual(links(traducao), links(html), idioma);
+    assert.ok(traducao.includes('<strong>' + botao + '</strong>'), idioma);
+    assert.equal(botao, require('../js/Textos' + (idioma === 'en' ? 'En' : 'Es') + '.js')['perfil.apagar']);
+    for (const trecho of ['30', 'Oreg', 'arthursn93', 'US West 2']) assert.ok(traducao.includes(trecho), idioma + ' falta: ' + trecho);
+  }
   // O prazo do backup na página é o mesmo do workflow.
   const backup = fs.readFileSync(path.join(__dirname, '..', '.github', 'workflows', 'backup.yml'), 'utf8');
   assert.match(backup, /retention-days: 30\b/);

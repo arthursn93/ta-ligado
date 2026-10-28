@@ -212,6 +212,31 @@ function contrato(nome, fabricar) {
       await a.fechar();
     }
   });
+
+  test(nome + ': apagar meus dados some com o perfil deste aparelho e só dele', async () => {
+    const a = await fabricar();
+    try {
+      await a.gravarPartida(resumo(Array(25).fill(true)));
+      await a.escolherVisual('tA', 'moldura', 'moldura_bronze');
+      assert.deepEqual(await a.apagar('tA'), { apagado: true });
+      const ana = await a.perfil('tA');
+      assert.equal(ana.nome, null);
+      assert.equal(ana.cartas, 0);
+      assert.equal(ana.nivel.xp, 0);
+      assert.deepEqual(ana.historico, []);
+      assert.equal(ana.visual.moldura, 'moldura_nenhuma');
+      assert.equal(await a.selo('tA'), null);
+      assert.deepEqual(await a.apagar('tA'), { apagado: false }, 'apagar de novo não dá erro');
+      const bia = await a.perfil('tB');
+      assert.equal(bia.nome, 'Bia');
+      assert.equal(bia.palpitesCertos, 25, 'a outra pessoa da partida não perde nada');
+      // Jogar de novo no mesmo aparelho começa do zero.
+      await a.gravarPartida(resumo(vinte, { inicio: 3000, fim: 4000 }));
+      assert.equal((await a.perfil('tA')).partidas.concluidas, 1);
+    } finally {
+      await a.fechar();
+    }
+  });
 }
 
 contrato('memória', async () => Memoria.criar());
@@ -408,4 +433,30 @@ test('servidor sem banco: o perfil avisa que não está disponível', async (t) 
   t.after(() => srv.io.close());
   const r = await pedir(srv.url, 'perfil', { token: 'tA' });
   assert.equal(r.ok, false);
+});
+
+test('servidor: o aparelho apaga os próprios dados e só os dele', async (t) => {
+  const armazem = Memoria.criar();
+  const srv = await subir({ armazem });
+  t.after(() => srv.io.close());
+  const { sala } = srv.salas.criarSala('tA', 'Ana');
+  srv.salas.entrar(sala.codigo, 'tB', 'Bia');
+  srv.salas.iniciar(sala.codigo, 'tA');
+  jogarInteira(srv.salas, sala);
+  await srv.aguardarGravacoes();
+  assert.equal((await pedir(srv.url, 'perfil:apagar', {})).ok, false, 'sem token');
+  assert.equal((await pedir(srv.url, 'perfil:apagar', { token: { $ne: 1 } })).ok, false, 'token que não é texto');
+  const r = await pedir(srv.url, 'perfil:apagar', { token: 'tA' });
+  assert.deepEqual(r, { ok: true, apagado: true });
+  assert.equal((await pedir(srv.url, 'perfil', { token: 'tA' })).perfil.cartas, 0);
+  assert.equal((await pedir(srv.url, 'perfil', { token: 'tB' })).perfil.cartas, 25);
+  assert.deepEqual(await pedir(srv.url, 'perfil:apagar', { token: 'tA' }), { ok: true, apagado: false });
+});
+
+test('servidor sem banco: apagar avisa que não há histórico guardado', async (t) => {
+  const srv = await subir({ armazem: null });
+  t.after(() => srv.io.close());
+  const r = await pedir(srv.url, 'perfil:apagar', { token: 'tA' });
+  assert.equal(r.ok, false);
+  assert.equal(r.chave, 'servidor.semHistorico');
 });

@@ -73,6 +73,10 @@
     }
     .voltar:hover { color: var(--primaria-escura); background: var(--superficie-suave); }
     .suave { font-size: 15px; color: var(--texto-suave); }
+    .idiomas { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
+    .idiomas a { flex: 0 1 auto; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 10px; border-radius: 14px; background: var(--fundo); text-decoration: none; font-size: 15px; }
+    .idiomas a[aria-current], .idiomas a[aria-current]:hover { background: var(--primaria); color: #fff; }
+    @media (max-width: 360px) { .idiomas a { flex-grow: 1; } }
     @media (max-width: 560px) { article { padding: 18px 16px 20px; } h1 { font-size: 26px; } .marca { font-size: 28px; -webkit-text-stroke-width: 5px; } li { padding-right: 12px; } }
   </style>
 </head>
@@ -84,7 +88,8 @@
     </div>
     <article>
       <h1>Privacidade e termos de uso</h1>
-      <p class="suave">Última atualização: 23 de outubro de 2026.</p>
+      <p class="suave">Última atualização: 28 de outubro de 2026.</p>
+      <nav class="idiomas" aria-label="Idioma desta página"><a href="privacidade.html" lang="pt-BR" aria-current="page">Português</a> <a href="privacidade-en.html" lang="en">English</a> <a href="privacidade-es.html" lang="es">Español</a></nav>
 
       <h2>Em resumo</h2>
       <p>O Tá Ligado? é um jogo gratuito, sem cadastro e sem anúncios. Guardamos o mínimo para a partida funcionar e apagamos quando a sala acaba. A exceção é o histórico das suas partidas, guardado sem nenhum dado pessoal além do nome que você usou na sala.</p>
@@ -94,10 +99,10 @@
         <li><strong>Nome que você digita:</strong> mostrado para quem está na mesma sala. Fica na memória do servidor só enquanto a sala existe.</li>
         <li><strong>Mensagens do chat:</strong> vistas só por quem está na sala. O servidor guarda as últimas 50 de cada sala, apenas na memória, e elas somem quando a sala é encerrada (quando todos saem ou o servidor reinicia). Não ficam gravadas em disco.</li>
         <li><strong>Histórico das partidas:</strong> quando uma partida online termina, o servidor guarda o resultado da turma, o código e o horário da sala, e o que cada um fez nela (pistas dadas e acertadas, palpites, cartas jogadas) junto com o nome usado na sala. Isso fica ligado a uma versão embaralhada do código do seu aparelho, que não dá para reverter, e serve só para mostrar suas estatísticas e seu progresso. Não guardamos e-mail, telefone, IP nem mensagens do chat.</li>
-        <li><strong>Por quanto tempo:</strong> o histórico das partidas, o progresso e as conquistas ficam guardados sem prazo para acabar, para o seu perfil continuar mostrando seus números. Você pode pedir para apagar a qualquer momento (veja "Seus direitos" abaixo).</li>
+        <li><strong>Por quanto tempo:</strong> o histórico das partidas, o progresso e as conquistas ficam guardados sem prazo para acabar, para o seu perfil continuar mostrando seus números. Você pode apagar a qualquer momento pelo próprio jogo (veja "Seus direitos" abaixo).</li>
         <li><strong>Cópia de segurança:</strong> uma vez por dia é feita uma cópia criptografada do banco de dados (com o histórico acima), guardada por 30 dias no GitHub. Ela só serve para recuperar o jogo se algo der errado e só pode ser aberta com uma senha que fica com o responsável.</li>
         <li><strong>Registros do servidor:</strong> o jogo anota eventos técnicos (por exemplo, "uma partida terminou" ou "o servidor reiniciou") sem IP, nome nem código de sala. A Render, que hospeda o jogo, guarda esses registros por alguns dias.</li>
-        <li><strong>No seu aparelho:</strong> o navegador guarda seu nome, a sala atual e um código aleatório que identifica o aparelho, para você voltar à partida se a página recarregar. Isso fica só no seu navegador e você pode apagar limpando os dados do site.</li>
+        <li><strong>No seu aparelho:</strong> o navegador guarda seu nome, a sala atual e um código aleatório que identifica o aparelho, para você voltar à partida se a página recarregar. Também guarda suas preferências: idioma, som ligado ou desligado, cor do tabuleiro e se você já viu o tutorial. Isso fica só no seu navegador e você pode apagar limpando os dados do site.</li>
       </ul>
 
       <h2>Voz</h2>
@@ -115,8 +120,10 @@
       <p>Não usamos cookies de rastreamento, não vendemos dados e não fazemos propaganda.</p>
 
       <h2>Seus direitos</h2>
-      <p>Você pode pedir para saber o que está guardado sobre você, corrigir ou apagar seu histórico. Para pedir, abra uma conversa no endereço de contato abaixo.</p>
+      <p>Você pode saber o que está guardado sobre você, corrigir ou apagar seu histórico.</p>
       <ul>
+        <li><strong>Para ver ou apagar, no próprio jogo:</strong> toque em <strong>Meu perfil</strong>. Ali aparecem seus números, suas últimas partidas e suas conquistas. No fim da tela, <strong>Apagar meus dados</strong> apaga na hora seu histórico, XP, conquistas e itens escolhidos. O resultado da turma em cada partida continua, sem o seu nome. Se você jogar de novo, um histórico novo começa do zero.</li>
+        <li>O botão só apaga o que está ligado a este aparelho e navegador. Se você limpou os dados do site, trocou de navegador ou de aparelho, ou quer outra coisa, abra uma conversa no endereço de contato abaixo.</li>
         <li><strong>Atenção:</strong> as conversas no GitHub são <strong>públicas</strong>, qualquer pessoa pode ler. Escreva só o nome que você usou nas salas e mais ou menos quando jogou. Não coloque e-mail, telefone ou outros dados.</li>
         <li>Como o jogo não tem cadastro, ele não sabe quem você é. Pode ser que precisemos de mais detalhes da partida (por exemplo, com quem você jogou) para achar seu histórico.</li>
         <li>Depois de apagado, o histórico ainda pode existir nas cópias de segurança por até 30 dias, até elas serem descartadas.</li>
