@@ -15,7 +15,7 @@
  *   'perfil'  {token}                -> {ok, perfil} | {ok:false, erro}   estatísticas e histórico do aparelho
  *   'perfil:visual' {token, tipo, id} -> {ok, perfil} | {ok:false, erro}  escolhe um item visual já liberado
  *   'perfil:apagar' {token}          -> {ok, apagado} | {ok:false, erro}  apaga o histórico do aparelho
- *   'metricas:abriu' {idioma, convite, voltou}   a tela inicial carregou (só soma contadores do dia)
+ *   'metricas:abriu' {idioma, convite, voltou, de}   a tela inicial carregou (só soma contadores do dia)
  *   'metricas:local'                 -> {ok}  começou o modo local (só soma o contador do dia)
  * Eventos do servidor:
  *   'estado'        visão da sala e da partida do ponto de vista de cada jogador.
@@ -151,6 +151,31 @@ function lerArquivo(arquivo, pronto) {
 function origemPublica(req) {
   const proto = String(req.headers['x-forwarded-proto'] || 'http').split(',')[0].trim();
   return proto + '://' + req.headers.host;
+}
+
+// Prévia do link (WhatsApp etc.) no idioma do convite: quem recebe `?idioma=en` vê o cartão em inglês.
+const PREVIAS = {
+  en: {
+    'og:locale': 'en_US',
+    'og:title': 'Tá Ligado? Come play with me!',
+    'og:description': 'One word links two. Join the room from the link and play together, each on your own phone. Free, no sign-up.',
+    'og:image:alt': 'Tá Ligado?, word game with a 5 by 5 board'
+  },
+  es: {
+    'og:locale': 'es_LA',
+    'og:title': 'Tá Ligado? ¡Ven a jugar conmigo!',
+    'og:description': 'Una palabra une dos. Entra a la sala con el enlace y jueguen juntos, cada uno en su celular. Gratis, sin registro.',
+    'og:image:alt': 'Tá Ligado?, juego de palabras con tablero de 5 por 5'
+  }
+};
+function previaNoIdioma(html, url) {
+  const m = /[?&]idioma=([a-z]+)/.exec(url || '');
+  const textos = m && PREVIAS[m[1]];
+  if (!textos) return html;
+  for (const [propriedade, valor] of Object.entries(textos)) {
+    html = html.replace(new RegExp('(<meta property="' + propriedade + '" content=")[^"]*"'), (_, inicio) => inicio + valor + '"');
+  }
+  return html;
 }
 
 const PAGINAS_PUBLICAS = ['/', '/privacidade.html', '/privacidade-en.html', '/privacidade-es.html'];
@@ -313,7 +338,7 @@ function criarServidor(opcoes) {
       let gzip = item.gzip;
       if (arquivo === 'index.html') {
         // A prévia do link (WhatsApp etc.) precisa do endereço completo da imagem.
-        corpo = Buffer.from(corpo.toString('utf8').split('{{ORIGEM}}').join(origemPublica(req)));
+        corpo = Buffer.from(previaNoIdioma(corpo.toString('utf8').split('{{ORIGEM}}').join(origemPublica(req)), req.url));
         gzip = zlib.gzipSync(corpo);
       }
       // Fontes não mudam (um arquivo novo ganha outro nome): o navegador guarda por um ano.
@@ -450,6 +475,7 @@ function criarServidor(opcoes) {
       if (['pt', 'en', 'es'].indexOf(dados.idioma) !== -1) metricas.contar('abriu_' + dados.idioma);
       if (dados.convite === true) metricas.contar('abriu_convite');
       if (dados.voltou === true) metricas.contar('abriu_voltou');
+      if (Metricas.CANAIS.indexOf(dados.de) !== -1) metricas.contar('abriu_de_' + dados.de);
     });
 
     // Começou o modo local (o jogo num aparelho só). Também uma vez por conexão.

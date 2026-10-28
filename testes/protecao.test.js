@@ -105,6 +105,25 @@ test('buscadores: robots.txt, sitemap e texto fixo na página com endereço can�
   assert.equal((await pedirHttp(srv.porta, '/robots.txt', { })).headers['x-content-type-options'], 'nosniff');
 });
 
+test('prévia do convite: no idioma do link, português sem idioma ou com idioma desconhecido', async (t) => {
+  const srv = await subir();
+  t.after(() => srv.io.close());
+  const meta = (html, prop) => new RegExp('<meta property="' + prop + '" content="([^"]*)"').exec(html)[1];
+  const pt = (await pedirHttp(srv.porta, '/?sala=ABCD')).corpo.toString();
+  const en = (await pedirHttp(srv.porta, '/?sala=ABCD&idioma=en')).corpo.toString();
+  const es = (await pedirHttp(srv.porta, '/?idioma=es')).corpo.toString();
+  const xx = (await pedirHttp(srv.porta, '/?idioma=xx')).corpo.toString();
+  assert.equal(meta(pt, 'og:title'), 'Tá Ligado? Bora jogar comigo!');
+  assert.equal(xx, pt);
+  assert.equal(meta(en, 'og:locale'), 'en_US');
+  assert.equal(meta(en, 'og:title'), 'Tá Ligado? Come play with me!');
+  assert.match(meta(en, 'og:description'), /^One word links two/);
+  assert.match(meta(en, 'og:image:alt'), /word game/);
+  assert.equal(meta(es, 'og:locale'), 'es_LA');
+  assert.match(meta(es, 'og:title'), /Ven a jugar/);
+  for (const html of [en, es]) assert.equal(meta(html, 'og:image'), meta(pt, 'og:image'), 'mesma imagem');
+});
+
 test('origem: aceita o próprio site e as liberadas, recusa as outras', async (t) => {
   const req = (origin) => ({ headers: { host: 'ta-ligado.onrender.com', origin } });
   assert.ok(origemPermitida(req(undefined), {}));

@@ -87,9 +87,9 @@ test('servidor: conta abertura, salas, entradas, partidas e modo local, só uma 
   const b = await cliente(srv.url);
   t.after(() => { a.close(); b.close(); srv.io.close(); });
 
-  a.emit('metricas:abriu', { idioma: 'en', convite: false, voltou: true });
-  a.emit('metricas:abriu', { idioma: 'en', convite: false, voltou: true }); // repetido na mesma conexão
-  b.emit('metricas:abriu', { idioma: 'xx', convite: true, voltou: 'sim' }); // idioma e voltou inválidos
+  a.emit('metricas:abriu', { idioma: 'en', convite: false, voltou: true, de: 'whatsapp' });
+  a.emit('metricas:abriu', { idioma: 'en', convite: false, voltou: true, de: 'whatsapp' }); // repetido na mesma conexão
+  b.emit('metricas:abriu', { idioma: 'xx', convite: true, voltou: 'sim', de: 'jornal' }); // idioma, voltou e canal inválidos
   const criada = await a.pedir('criar', { token: 'tA', nome: 'Ana' });
   assert.ok(criada.ok);
   assert.ok((await b.pedir('entrar', { codigo: criada.codigo, token: 'tB', nome: 'Bia' })).ok);
@@ -99,7 +99,7 @@ test('servidor: conta abertura, salas, entradas, partidas e modo local, só uma 
   await b.pedir('metricas:local');
 
   assert.deepEqual(await totais(srv, armazem), {
-    abriu: 2, abriu_en: 1, abriu_voltou: 1, abriu_convite: 1,
+    abriu: 2, abriu_en: 1, abriu_voltou: 1, abriu_convite: 1, abriu_de_whatsapp: 1,
     sala_criada: 1, entrou_na_sala: 1, partida_iniciada: 1, partida_local: 1
   });
 
