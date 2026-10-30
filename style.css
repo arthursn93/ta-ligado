@@ -515,6 +515,9 @@ button { font: inherit; color: inherit; }
 .acoes { display: flex; justify-content: center; gap: 10px; margin-top: 22px; }
 .acoes + .suave { margin-top: 16px; font-size: 15px; }
 .acoes .botao:not(.botao-fantasma) { flex: 1; }
+/* Confirmações (nova partida, voltar ao menu): em tela estreita os dois botões quebram de linha em vez de vazar. */
+.modal-nova .acoes, .modal-menu .acoes { flex-wrap: wrap; }
+.modal-nova .acoes .botao, .modal-menu .acoes .botao { flex: 1 1 auto; }
 
 .selo {
   width: 84px;
@@ -1138,7 +1141,18 @@ button { font: inherit; color: inherit; }
 
 /* Botão de som (ligar/desligar), no topo do jogo e na sala de espera. */
 .botao-som { flex: none; padding-left: 10px; padding-right: 10px; font-size: 18px; line-height: 1; }
-.topo .botao-som { margin-left: auto; padding-left: 10px; padding-right: 10px; }
+.topo .botao-som { padding-left: 10px; padding-right: 10px; }
+/* Som, Menu e Nova partida ficam juntos à direita. No celular, quando não cabem na linha do placar
+   (com o botão Menu, ou em telas bem estreitas), descem para uma linha própria. */
+.topo-acoes { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+@media (max-width: 560px) {
+  .topo-com-menu { flex-wrap: wrap; row-gap: 10px; }
+  .topo-com-menu .topo-acoes { flex-basis: 100%; justify-content: center; gap: 8px; }
+}
+@media (max-width: 360px) {
+  .topo { flex-wrap: wrap; row-gap: 10px; }
+  .topo .topo-acoes { flex-basis: 100%; justify-content: center; gap: 8px; }
+}
 
 /* ---------- Tutorial (Como jogar): tabuleiro de exemplo 3×3 dentro de uma janela ---------- */
 

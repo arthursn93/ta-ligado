@@ -59,6 +59,7 @@ var TextosPt = {
   'jogo.acertos': 'Acertos',
   'jogo.erros': 'Erros',
   'jogo.novaPartida': 'Nova partida',
+  'jogo.menu': 'Menu',
   'jogo.tabuleiro': 'Tabuleiro 5 por 5',
   'jogo.sala': 'Sala <b>{codigo}</b>',
   'jogo.chipNivel': ', nível {nivel} · {titulo}',
@@ -98,6 +99,8 @@ var TextosPt = {
   // ---------- Jogo: janelas (nova partida, passar o aparelho, dador, fim) ----------
   'modal.novaTitulo': 'Começar outra partida?',
   'modal.novaAviso': 'O placar desta partida será perdido.',
+  'modal.menuTitulo': 'Voltar ao menu inicial?',
+  'modal.menuConfirmar': 'Voltar ao menu',
   'modal.continuar': 'Continuar jogando',
   'modal.passarCarta': 'Carta {rodada} de {total}',
   'modal.passarTitulo': 'Passe o aparelho para quem vai dar a pista',

@@ -22,16 +22,19 @@ var UI = (function () {
   var LINHAS = Game.LINHAS;
   var t = Textos.t;
 
-  function molde() {
+  function molde(comMenu) {
     return [
-      '<header class="topo">',
+      '<header class="topo' + (comMenu ? ' topo-com-menu' : '') + '">',
       '  <h1 class="marca">Tá <span>Ligado?</span></h1>',
       '  <div class="placar" aria-live="polite">',
       '    <span class="placar-rodada"></span>',
       '    <span class="pilula pilula-acerto" title="' + t('jogo.acertos') + '"></span>',
       '    <span class="pilula pilula-erro" title="' + t('jogo.erros') + '"></span>',
       '  </div>',
-      '  <button class="botao botao-fantasma" data-acao="nova-pedir">' + t('jogo.novaPartida') + '</button>',
+      '  <div class="topo-acoes">',
+      (comMenu ? '    <button class="botao botao-fantasma" data-acao="menu-pedir">' + t('jogo.menu') + '</button>' : ''),
+      '    <button class="botao botao-fantasma" data-acao="nova-pedir">' + t('jogo.novaPartida') + '</button>',
+      '  </div>',
       '</header>',
       '<section class="barra-sala" hidden></section>',
       '<section class="faixa-pista" aria-live="polite"></section>',
@@ -74,12 +77,12 @@ var UI = (function () {
     var barraAtual = null;
     var selecionada = null;
     var emFoco = null; // hover no desktop
-    var confirmandoNova = false;
+    var confirmando = null; // 'nova' ou 'menu' enquanto a janela de confirmação está aberta
     var chaveModal = null;
     var painelAtual = null;
     var faixaAtual = null;
 
-    raiz.innerHTML = molde();
+    raiz.innerHTML = molde(!!opcoes.aoMenu);
     var el = {
       nova: raiz.querySelector('.topo [data-acao="nova-pedir"]'),
       barra: raiz.querySelector('.barra-sala'),
@@ -164,7 +167,7 @@ var UI = (function () {
     });
 
     document.addEventListener('keydown', function (ev) {
-      if (ev.key === 'Escape' && confirmandoNova) { agir('nova-cancelar'); return; }
+      if (ev.key === 'Escape' && confirmando) { agir('confirmacao-cancelar'); return; }
       if (ev.key === 'Escape' && selecionada) { selecionada = null; render(); return; }
       if (ev.key === 'Enter' && etapa === 'palpite' && selecionada && !el.sobreposicao.contains(document.activeElement)) {
         ev.preventDefault();
@@ -231,11 +234,18 @@ var UI = (function () {
           break;
         case 'nova-pedir':
           // Sem nada jogado ou com a partida encerrada, não precisa confirmar.
-          if ((v.historico.length === 0 && !v.pista) || v.fase === Game.FASE.FIM) { novaPartida(); break; }
-          confirmandoNova = true;
+          if (semNadaEmJogo(v)) { novaPartida(); break; }
+          confirmando = 'nova';
           break;
-        case 'nova-cancelar':
-          confirmandoNova = false;
+        case 'menu-pedir':
+          if (semNadaEmJogo(v)) { opcoes.aoMenu(); return; }
+          confirmando = 'menu';
+          break;
+        case 'menu-confirmar':
+          opcoes.aoMenu();
+          return;
+        case 'confirmacao-cancelar':
+          confirmando = null;
           break;
         case 'nova-confirmar':
           novaPartida();
@@ -246,8 +256,12 @@ var UI = (function () {
       render();
     }
 
+    function semNadaEmJogo(v) {
+      return (v.historico.length === 0 && !v.pista) || v.fase === Game.FASE.FIM;
+    }
+
     function novaPartida() {
-      confirmandoNova = false;
+      confirmando = null;
       selecionada = null;
       if (online) {
         // O servidor só aceita do anfitrião; a tela reinicia quando chegar o estado novo.
@@ -297,7 +311,7 @@ var UI = (function () {
         // O anfitrião começou outra partida.
         etapa = null;
         selecionada = null;
-        confirmandoNova = false;
+        confirmando = null;
       } else if (jogadasVistas >= 0 && jogadas > jogadasVistas) {
         // Alguém chutou: todo mundo vê o resultado da carta.
         etapa = 'resultado';
@@ -522,16 +536,18 @@ var UI = (function () {
     function renderModal(v) {
       var progresso = online && etapa === 'fim' ? jogo.progresso() : null;
       // O XP chega um instante depois do fim: a chave muda quando ele chega, para redesenhar.
-      var chave = confirmandoNova ? 'nova' : etapa === 'fim' ? 'fim' + (progresso ? (progresso.carregando ? '-calculando' : '-pronto') : '') : etapa;
+      var chave = confirmando || (etapa === 'fim' ? 'fim' + (progresso ? (progresso.carregando ? '-calculando' : '-pronto') : '') : etapa);
       var conteudo = null;
 
-      if (confirmandoNova) {
+      if (confirmando) {
+        var menu = confirmando === 'menu';
         conteudo =
-          '<h2>' + t('modal.novaTitulo') + '</h2>' +
+          '<h2>' + t(menu ? 'modal.menuTitulo' : 'modal.novaTitulo') + '</h2>' +
           '<p class="suave">' + t('modal.novaAviso') + '</p>' +
           '<div class="acoes">' +
-            '<button class="botao botao-fantasma" data-acao="nova-cancelar">' + t('modal.continuar') + '</button>' +
-            '<button class="botao botao-primario" data-acao="nova-confirmar">' + t('jogo.novaPartida') + '</button>' +
+            '<button class="botao botao-fantasma" data-acao="confirmacao-cancelar">' + t('modal.continuar') + '</button>' +
+            '<button class="botao botao-primario" data-acao="' + (menu ? 'menu-confirmar' : 'nova-confirmar') + '">' +
+              t(menu ? 'modal.menuConfirmar' : 'jogo.novaPartida') + '</button>' +
           '</div>';
       } else if (etapa === 'passar') {
         conteudo =
@@ -588,7 +604,7 @@ var UI = (function () {
       if (chave === chaveModal) return; // mantém o que o dador já digitou
       chaveModal = chave;
       el.modal.innerHTML = conteudo;
-      el.modal.className = 'cartao-modal modal-' + (confirmandoNova ? 'nova' : etapa);
+      el.modal.className = 'cartao-modal modal-' + (confirmando || etapa);
       el.sobreposicao.hidden = false;
       var focar = el.modal.querySelector('input') || el.modal.querySelector('.botao-primario');
       if (focar) focar.focus();

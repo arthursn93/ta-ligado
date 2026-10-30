@@ -21,10 +21,20 @@
   });
   var ESPERA_MAXIMA_MS = 60 * 1000; // o servidor gratuito pode levar quase 1 minuto para acordar
 
+  /** Volta à tela inicial, no mesmo idioma, com um aviso opcional. */
+  function voltarAoInicio(aviso) {
+    var busca = (aviso ? '&aviso=' + aviso : '') + Idioma.noEndereco();
+    window.location.href = window.location.pathname + (busca ? '?' + busca.slice(1) : '');
+  }
+
   function jogarLocal() {
     raiz.innerHTML = '';
     // As palavras da grade seguem o idioma da interface, como numa sala criada neste aparelho.
-    UI.criar(raiz, Game.criar({ pacote: WordBank.pacoteDoIdioma(Textos.idioma()) }), { som: som });
+    // Aberto direto do arquivo não há tela inicial: aí fica só "Nova partida".
+    UI.criar(raiz, Game.criar({ pacote: WordBank.pacoteDoIdioma(Textos.idioma()) }), {
+      som: som,
+      aoMenu: /^https?:$/.test(window.location.protocol) ? function () { voltarAoInicio(); } : null
+    });
   }
 
   function telaSimples(miolo) {
@@ -103,10 +113,6 @@
     comecou = true;
     clearTimeout(relogio);
     avisarAbertura();
-    function voltarAoInicio(aviso) {
-      var busca = (aviso ? '&aviso=' + aviso : '') + Idioma.noEndereco();
-      window.location.href = window.location.pathname + (busca ? '?' + busca.slice(1) : '');
-    }
     Lobby.criar(raiz, rede, {
       social: social,
       som: som,
