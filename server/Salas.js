@@ -11,6 +11,7 @@
 
 const crypto = require('crypto');
 const Game = require('../js/Game.js');
+const { pacoteDoIdioma } = require('../js/WordBank.js');
 const Partida = require('./progressao/Partida.js');
 const { hashToken } = require('./progressao/Perfil.js');
 const Log = require('./log.js');
@@ -24,11 +25,6 @@ const HISTORICO_CHAT = 50;
 const LIMITE_MENSAGENS = 6; // por jogador, a cada JANELA_MENSAGENS_MS
 const JANELA_MENSAGENS_MS = 10000;
 const ESTADOS_VOZ = ['ouvindo', 'mudo', 'ligado']; // null = fora da voz
-
-/** Baralho das palavras da grade em cada idioma da sala. */
-function pacoteDoIdioma(idioma) {
-  return idioma === 'pt' ? 'classico' : 'classico-' + idioma;
-}
 
 function criarGerenciador(opcoes) {
   opcoes = opcoes || {};

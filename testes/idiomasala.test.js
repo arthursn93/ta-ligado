@@ -42,6 +42,22 @@ for (const [idioma, id] of [['pt', 'classico'], ['en', 'classico-en'], ['es', 'c
   });
 }
 
+for (const [idioma, id] of [['pt', 'classico'], ['en', 'classico-en'], ['es', 'classico-es']]) {
+  test('modo de um aparelho em ' + idioma + ' sorteia do baralho ' + id + ', também na nova partida', () => {
+    assert.equal(WordBank.pacoteDoIdioma(idioma), id);
+    const jogo = Game.criar({ pacote: WordBank.pacoteDoIdioma(idioma), rng: Util.rngComSemente(3) });
+    const palavras = () => jogo.visao().colunas.concat(jogo.visao().linhas);
+    assert.ok(doBaralho(id, palavras()));
+    jogo.executar({ tipo: 'NOVA_PARTIDA' });
+    assert.ok(doBaralho(id, palavras()));
+  });
+}
+
+test('idioma desconhecido cai no baralho em português', () => {
+  assert.equal(WordBank.pacoteDoIdioma('fr'), 'classico');
+  assert.equal(WordBank.pacoteDoIdioma(undefined), 'classico');
+});
+
 test('só o anfitrião troca o idioma das palavras, e só antes da primeira partida', () => {
   const g = gerenciador();
   const { sala } = g.criarSala('tA', 'Ana', 'pt');
