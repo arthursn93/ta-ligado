@@ -56,6 +56,7 @@ var TextosEn = {
   'jogo.acertos': 'Correct',
   'jogo.erros': 'Wrong',
   'jogo.novaPartida': 'New game',
+  'jogo.menu': 'Menu',
   'jogo.tabuleiro': '5 by 5 board',
   'jogo.sala': 'Room <b>{codigo}</b>',
   'jogo.chipNivel': ', level {nivel} · {titulo}',
@@ -95,6 +96,8 @@ var TextosEn = {
   // ---------- Jogo: janelas (nova partida, passar o aparelho, dador, fim) ----------
   'modal.novaTitulo': 'Start another game?',
   'modal.novaAviso': 'The score of this game will be lost.',
+  'modal.menuTitulo': 'Back to the main menu?',
+  'modal.menuConfirmar': 'Back to menu',
   'modal.continuar': 'Keep playing',
   'modal.passarCarta': 'Card {rodada} of {total}',
   'modal.passarTitulo': 'Pass the device to whoever is giving the clue',

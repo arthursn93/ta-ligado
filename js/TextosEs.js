@@ -56,6 +56,7 @@ var TextosEs = {
   'jogo.acertos': 'Aciertos',
   'jogo.erros': 'Errores',
   'jogo.novaPartida': 'Nueva partida',
+  'jogo.menu': 'Menú',
   'jogo.tabuleiro': 'Tablero de 5 por 5',
   'jogo.sala': 'Sala <b>{codigo}</b>',
   'jogo.chipNivel': ', nivel {nivel} · {titulo}',
@@ -95,6 +96,8 @@ var TextosEs = {
   // ---------- Jogo: janelas (nova partida, passar o aparelho, dador, fim) ----------
   'modal.novaTitulo': '¿Empezar otra partida?',
   'modal.novaAviso': 'Se perderá el marcador de esta partida.',
+  'modal.menuTitulo': '¿Volver al menú principal?',
+  'modal.menuConfirmar': 'Volver al menú',
   'modal.continuar': 'Seguir jugando',
   'modal.passarCarta': 'Carta {rodada} de {total}',
   'modal.passarTitulo': 'Pasa el dispositivo a quien va a dar la pista',
