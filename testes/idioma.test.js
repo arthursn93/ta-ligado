@@ -22,6 +22,18 @@ test('começa em português; o endereço vale se nada foi escolhido; a escolha s
   assert.equal(Idioma.inicial(janela('', 'lixo')), 'pt');
 });
 
+test('sem escolha nem endereço, usa o idioma do navegador se o jogo tiver; senão português', () => {
+  const com = (languages, language, busca, salvo) => Object.assign(janela(busca, salvo), { navigator: { languages, language } });
+  assert.equal(Idioma.inicial(com(['en-US', 'en'])), 'en');
+  assert.equal(Idioma.inicial(com(['es-AR'])), 'es');
+  assert.equal(Idioma.inicial(com(['pt-BR', 'en-US'])), 'pt');
+  assert.equal(Idioma.inicial(com(['fr-FR', 'es'])), 'es', 'pula o que o jogo não tem');
+  assert.equal(Idioma.inicial(com(['fr-FR', 'de'])), 'pt');
+  assert.equal(Idioma.inicial(com(undefined, 'en-GB')), 'en', 'navegador antigo só com language');
+  assert.equal(Idioma.inicial(com(['en-US'], 'en-US', '?idioma=es')), 'es', 'o endereço vale mais');
+  assert.equal(Idioma.inicial(com(['en-US'], 'en-US', '', 'pt')), 'pt', 'a escolha salva vale mais');
+});
+
 test('sem armazenamento no aparelho, não quebra e usa o endereço', () => {
   const quebrado = { location: { search: '?idioma=es' }, get localStorage() { throw new Error('bloqueado'); } };
   assert.equal(Idioma.inicial(quebrado), 'es');

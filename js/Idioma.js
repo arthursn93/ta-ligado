@@ -1,7 +1,8 @@
 /**
  * Idioma — qual idioma a interface usa e o botão PT / EN / ES da tela inicial.
  *
- * Ordem: a escolha salva no aparelho; senão `?idioma=` no endereço (convite ou prévia); senão português.
+ * Ordem: a escolha salva no aparelho; senão `?idioma=` no endereço (convite ou prévia); senão o idioma
+ * do navegador, se for um dos três; senão português.
  * Só a escolha feita no botão fica salva. O idioma do endereço vale para esta visita.
  */
 var Idioma = (function () {
@@ -34,10 +35,21 @@ var Idioma = (function () {
     return m && valido(m[1]) ? m[1] : null;
   }
 
+  /** Primeiro idioma do navegador que o jogo tem ('en-US' vale 'en'). */
+  function doNavegador(janela) {
+    var nav = janela.navigator || {};
+    var lista = nav.languages && nav.languages.length ? nav.languages : [nav.language];
+    for (var i = 0; i < lista.length; i++) {
+      var codigo = String(lista[i] || '').slice(0, 2).toLowerCase();
+      if (valido(codigo)) return codigo;
+    }
+    return null;
+  }
+
   /** O idioma desta visita. */
   function inicial(janela) {
     janela = janela || janelaPadrao();
-    return salvo(janela) || doEndereco(janela) || 'pt';
+    return salvo(janela) || doEndereco(janela) || doNavegador(janela) || 'pt';
   }
 
   /** Passa a usar o idioma na interface (sem salvar). */

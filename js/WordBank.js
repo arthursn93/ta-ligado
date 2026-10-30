@@ -520,8 +520,13 @@ var WordBank = (function () {
   classicoEm('en', 'Classic');
   classicoEm('es', 'Clásico');
 
+  /** Baralho da grade para cada idioma: o clássico em português, inglês ou espanhol. */
+  function pacoteDoIdioma(idioma) {
+    return idioma === 'en' || idioma === 'es' ? 'classico-' + idioma : 'classico';
+  }
+
   return {
-    registrar: registrar, obter: obter, listar: listar, idioma: idioma, sortear: sortear,
+    registrar: registrar, obter: obter, listar: listar, idioma: idioma, sortear: sortear, pacoteDoIdioma: pacoteDoIdioma,
     equivalentes: equivalentes, ehSimples: ehSimples, TRADUCOES: TRADUCOES
   };
 })();

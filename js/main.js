@@ -23,7 +23,8 @@
 
   function jogarLocal() {
     raiz.innerHTML = '';
-    UI.criar(raiz, Game.criar(), { som: som });
+    // As palavras da grade seguem o idioma da interface, como numa sala criada neste aparelho.
+    UI.criar(raiz, Game.criar({ pacote: WordBank.pacoteDoIdioma(Textos.idioma()) }), { som: som });
   }
 
   function telaSimples(miolo) {
