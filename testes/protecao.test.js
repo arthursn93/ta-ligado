@@ -283,3 +283,17 @@ test('privacidade: conta backup, prazo, onde ficam os dados, direitos e respons�
   const backup = fs.readFileSync(path.join(__dirname, '..', '.github', 'workflows', 'backup.yml'), 'utf8');
   assert.match(backup, /retention-days: 30\b/);
 });
+
+test('caminhos relativos: as páginas funcionam numa subpasta (GitHub Pages, CrazyGames)', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const raiz = path.join(__dirname, '..');
+  const arquivos = ['index.html', 'privacidade.html', 'privacidade-en.html', 'privacidade-es.html', 'style.css'];
+  const absolutos = [];
+  for (const nome of arquivos) {
+    const texto = fs.readFileSync(path.join(raiz, nome), 'utf8');
+    // href="/…", src="/…" ou url(/…) apontam para a raiz do site e quebram fora dela ("//" e "https://" não contam).
+    for (const m of texto.matchAll(/(?:href|src)="(\/(?!\/)[^"]*)"|url\(\s*['"]?(\/(?!\/)[^)'"]*)/g)) absolutos.push(nome + ': ' + (m[1] || m[2]));
+  }
+  assert.deepEqual(absolutos, []);
+});
