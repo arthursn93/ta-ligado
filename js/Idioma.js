@@ -2,7 +2,7 @@
  * Idioma — qual idioma a interface usa e o botão PT / EN / ES da tela inicial.
  *
  * Ordem: a escolha salva no aparelho; senão `?idioma=` no endereço (convite ou prévia); senão o idioma
- * do navegador, se for um dos três; senão português.
+ * do navegador, se for um dos três; senão inglês (quem não fala nenhum dos três entende mais o inglês).
  * Só a escolha feita no botão fica salva. O idioma do endereço vale para esta visita.
  */
 var Idioma = (function () {
@@ -49,7 +49,7 @@ var Idioma = (function () {
   /** O idioma desta visita. */
   function inicial(janela) {
     janela = janela || janelaPadrao();
-    return salvo(janela) || doEndereco(janela) || doNavegador(janela) || 'pt';
+    return salvo(janela) || doEndereco(janela) || doNavegador(janela) || 'en';
   }
 
   /** Passa a usar o idioma na interface (sem salvar). */
@@ -68,10 +68,9 @@ var Idioma = (function () {
     return true;
   }
 
-  /** `&idioma=xx` para levar no convite e na volta da sala. Português é o padrão e não precisa. */
+  /** `&idioma=xx` para levar no convite e na volta da sala. Vai sempre, porque o padrão depende do navegador. */
   function noEndereco() {
-    var atual = TextosRef.idioma();
-    return atual === 'pt' ? '' : '&idioma=' + atual;
+    return '&idioma=' + TextosRef.idioma();
   }
 
   /** Botão PT / EN / ES da interface, na tela inicial. */
