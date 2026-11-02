@@ -52,6 +52,20 @@ Bom saber sobre o plano gratuito:
 - Quando o Render vai desligar a versão antiga (sinal `SIGTERM`), o servidor avisa na hora os aparelhos conectados: "O jogo está sendo atualizado. Esta sala vai fechar em instantes." Espera no máximo 1 segundo pelas confirmações e desliga; quem não recebeu vê "Reconectando…", como antes. Partidas em andamento não são gravadas, e as que já terminaram acabam de ser gravadas antes de desligar.
 - A tela inicial aparece sem esperar o servidor. Enquanto ele acorda, ela mostra "Acordando o servidor… Pode levar até 1 minuto" e o modo de um aparelho só já funciona; criar ou entrar numa sala avisa que o servidor ainda está acordando. Se o arquivo de conexão não carregar em 1 minuto, aparece a opção de tentar de novo ou jogar num aparelho só.
 
+### Cópia da tela no GitHub Pages (abre na hora)
+
+A tela do jogo (HTML, CSS, JS e fontes) também pode ser publicada no GitHub Pages, que nunca dorme. Ela abre na hora; o modo de um aparelho só funciona sem servidor, e as salas online continuam no Render. O endereço fica `https://arthursn93.github.io/ta-ligado/`.
+
+- `.github/workflows/pages.yml` roda depois que os testes passam no `main` (ou à mão, em **Actions** > **GitHub Pages** > **Run workflow**).
+- `scripts/montar-pages.js` monta a pasta `_site/` com os arquivos públicos, a biblioteca de conexão e um `js/Config.js` apontando para `https://ta-ligado.onrender.com`. No Render, `js/Config.js` fica vazio e o jogo conecta no próprio endereço.
+
+Para ligar (uma vez só):
+
+1. No GitHub: **Settings** > **Pages** > em **Source**, escolha **GitHub Actions**. Sem isso, a publicação falha.
+2. No Render: serviço `ta-ligado` > **Environment** > **Add Environment Variable**: `ORIGENS_PERMITIDAS` = `https://arthursn93.github.io` (sem barra no fim). Salve; o Render reinicia o servidor. Sem isso, a cópia abre mas não consegue criar salas online.
+
+Bom saber: o navegador guarda o progresso separado por endereço. Quem jogou no Render e abrir no github.io começa com um aparelho novo (e o contrário também).
+
 ### Logs
 
 O servidor escreve uma linha JSON por acontecimento, para ler em **Logs** no Render. Dá para buscar pelo nome do evento (por exemplo `erro_` ou `limites_atingidos`). O código fica em `server/log.js`.

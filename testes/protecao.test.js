@@ -124,6 +124,18 @@ test('prévia do convite: no idioma do link, português sem idioma ou com idioma
   for (const html of [en, es]) assert.equal(meta(html, 'og:image'), meta(pt, 'og:image'), 'mesma imagem');
 });
 
+test('config: o jogo do Render conecta no próprio endereço e carrega a conexão por caminho relativo', async (t) => {
+  const srv = await subir();
+  t.after(() => srv.io.close());
+  const config = await pedirHttp(srv.porta, '/js/Config.js');
+  assert.equal(config.status, 200);
+  assert.match(config.corpo.toString(), /var Config = \{ servidor: '' \};/);
+  const pagina = (await pedirHttp(srv.porta, '/')).corpo.toString();
+  const ordem = [...pagina.matchAll(/<script src="js\/(\w+)\.js">/g)].map((m) => m[1]);
+  assert.ok(ordem.indexOf('Config') !== -1 && ordem.indexOf('Config') < ordem.indexOf('main'), 'Config antes do main');
+  assert.equal((await pedirHttp(srv.porta, '/socket.io/socket.io.min.js')).status, 200, 'o caminho relativo do main.js existe no servidor');
+});
+
 test('origem: aceita o próprio site e as liberadas, recusa as outras', async (t) => {
   const req = (origin) => ({ headers: { host: 'ta-ligado.onrender.com', origin } });
   assert.ok(origemPermitida(req(undefined), {}));

@@ -1,0 +1,59 @@
+# Publica no GitHub Pages uma cópia da tela do jogo, que abre na hora porque o GitHub Pages não
+# dorme. As salas online continuam no servidor do Render (SERVIDOR abaixo), que precisa ter o
+# endereço desta cópia em ORIGENS_PERMITIDAS. Nenhum segredo vai para a cópia. Ver README.
+name: GitHub Pages
+
+on:
+  # Só publica depois que os testes passarem num commit do main, como o Render.
+  workflow_run:
+    workflows: [Testes]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    name: publicar
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.publicacao.outputs.page_url }}
+    env:
+      SERVIDOR: https://ta-ligado.onrender.com
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # O commit que passou nos testes (ou o main, se disparado à mão).
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Instalar dependências (package-lock.json)
+        run: npm ci
+
+      - id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Montar a cópia em _site/
+        run: node scripts/montar-pages.js --origem "${{ steps.pages.outputs.base_url }}" --servidor "$SERVIDOR"
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: publicacao
+        uses: actions/deploy-pages@v4
