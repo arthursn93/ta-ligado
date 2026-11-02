@@ -136,10 +136,12 @@
   mostrarConectando();
   relogio = setTimeout(mostrarFalha, ESPERA_MAXIMA_MS);
   var script = document.createElement('script');
-  script.src = '/socket.io/socket.io.min.js';
+  // Caminho relativo: no Render é o próprio servidor que entrega; no GitHub Pages, a cópia que vai junto.
+  script.src = 'socket.io/socket.io.min.js';
   script.onload = function () {
     if (typeof window.io !== 'function') { clearTimeout(relogio); mostrarFalha(); return; }
-    socket = window.io();
+    // Sem endereço configurado, conecta no mesmo endereço da página.
+    socket = Config.servidor ? window.io(Config.servidor) : window.io();
     // A Rede assina o 'connect' antes de nós: ela volta para a sala salva assim que conectar.
     rede = Rede.criar(socket);
     social = Social.criar(rede);
