@@ -1,0 +1,33 @@
+# Mantém o servidor do Render acordado: o plano grátis dorme depois de 15 minutos sem visitas e
+# leva cerca de 1 minuto para acordar. A cada 10 minutos este robô pede /saude, que responde "ok"
+# sem tocar no banco. Para desligar: aba Actions > "Manter acordado" > "Disable workflow".
+# Um mês inteiro acordado usa até 744 das 750 horas grátis da conta no Render. Ver README.
+name: Manter acordado
+
+on:
+  schedule:
+    # O GitHub pode atrasar execuções agendadas em horários de pico.
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: manter-acordado
+  cancel-in-progress: false
+
+jobs:
+  visitar:
+    name: visitar
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Se o servidor estiver dormindo, o Render segura o pedido enquanto acorda: daí o tempo longo.
+      - name: Pedir /saude
+        env:
+          ENDERECO: https://ta-ligado.onrender.com/saude
+        run: |
+          resposta=$(curl --fail --silent --show-error --max-time 120 --retry 3 --retry-delay 10 --retry-all-errors \
+            -w ' (HTTP %{http_code} em %{time_total}s)' "$ENDERECO")
+          echo "Resposta: $resposta"
+          case "$resposta" in ok*) ;; *) echo "::error::O servidor não respondeu ok."; exit 1 ;; esac
