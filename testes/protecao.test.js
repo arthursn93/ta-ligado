@@ -142,6 +142,17 @@ test('origem: aceita o próprio site e as liberadas, recusa as outras', async (t
   assert.ok(origemPermitida(req('https://ta-ligado.onrender.com'), {}));
   assert.ok(!origemPermitida(req('https://site-estranho.com'), {}));
   assert.ok(origemPermitida(req('capacitor://localhost'), { ORIGENS_PERMITIDAS: 'https://x.com, capacitor://localhost' }));
+  // Curinga de subdomínio: libera os endereços da CrazyGames, onde os arquivos do jogo ficam num subdomínio.
+  const cg = { ORIGENS_PERMITIDAS: 'https://arthursn93.github.io, https://*.crazygames.com' };
+  assert.ok(origemPermitida(req('https://ta-ligado.game-files.crazygames.com'), cg));
+  assert.ok(origemPermitida(req('https://games.crazygames.com'), cg));
+  assert.ok(origemPermitida(req('https://arthursn93.github.io'), cg));
+  assert.ok(!origemPermitida(req('https://crazygames.com'), cg), 'o curinga vale só para subdomínios');
+  assert.ok(!origemPermitida(req('http://games.crazygames.com'), cg), 'só https');
+  assert.ok(!origemPermitida(req('https://games.crazygames.com:8443'), cg), 'sem porta diferente');
+  assert.ok(!origemPermitida(req('https://crazygames.com.golpe.com'), cg));
+  assert.ok(!origemPermitida(req('https://golpecrazygames.com'), cg));
+  assert.ok(!origemPermitida(req('https://x.crazygames.com.golpe.com'), cg));
 
   const srv = await subir();
   t.after(() => srv.io.close());

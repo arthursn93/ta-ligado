@@ -218,12 +218,29 @@ function criarLimitador(limite) {
   };
 }
 
+/**
+ * A origem está em ORIGENS_PERMITIDAS? Cada item é um endereço exato (`https://x.com`) ou, para
+ * liberar os subdomínios de um site, `https://*.x.com` (vale para `https://a.x.com`, `https://a.b.x.com`;
+ * não vale para `https://x.com` nem para outro esquema).
+ */
+function origemLiberada(origem, env) {
+  const extras = String(env.ORIGENS_PERMITIDAS || '').split(',').map((o) => o.trim()).filter(Boolean);
+  return extras.some((item) => {
+    if (item === origem) return true;
+    const curinga = /^([a-z][a-z0-9+.-]*):\/\/\*\.([a-z0-9.-]+)$/i.exec(item);
+    if (!curinga) return false;
+    let url;
+    try { url = new URL(origem); } catch (e) { return false; }
+    if (url.protocol !== curinga[1].toLowerCase() + ':' || url.port || origem !== url.origin) return false;
+    return url.hostname.endsWith('.' + curinga[2].toLowerCase());
+  });
+}
+
 /** Só aceita conexões vindas do próprio site (ou das origens liberadas em ORIGENS_PERMITIDAS). */
 function origemPermitida(req, env) {
   const origem = req.headers.origin;
   if (!origem) return true; // apps nativos e testes não mandam Origin
-  const extras = String(env.ORIGENS_PERMITIDAS || '').split(',').map((o) => o.trim()).filter(Boolean);
-  if (extras.indexOf(origem) !== -1) return true;
+  if (origemLiberada(origem, env)) return true;
   try { return new URL(origem).host === req.headers.host; } catch (e) { return false; }
 }
 
@@ -366,7 +383,7 @@ function criarServidor(opcoes) {
       }
       aceitar(null, true);
     },
-    cors: { origin: (origem, pronto) => pronto(null, !origem || String(env.ORIGENS_PERMITIDAS || '').split(',').map((o) => o.trim()).indexOf(origem) !== -1) }
+    cors: { origin: (origem, pronto) => pronto(null, !origem || origemLiberada(origem, env)) }
   });
 
   /** Manda para cada aparelho da sala a visão dele. */

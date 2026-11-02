@@ -159,7 +159,7 @@ Nenhuma é obrigatória. Todas ficam em **Environment** no painel do Render, nun
 | Variável | Para quê |
 | --- | --- |
 | `DATABASE_URL` | PostgreSQL do histórico, XP, conquistas e perfil. Sem ela o jogo funciona, mas sem progressão. |
-| `ORIGENS_PERMITIDAS` | Outros endereços que podem conectar no servidor, separados por vírgula. |
+| `ORIGENS_PERMITIDAS` | Outros endereços que podem conectar no servidor, separados por vírgula. Para liberar todos os subdomínios de um site, use `https://*.site.com` (não inclui o próprio `site.com`). Hoje: `https://arthursn93.github.io,https://*.crazygames.com`. |
 | `TURN_URL`, `TURN_USERNAME`, `TURN_CREDENTIAL` | Servidor TURN para a voz em redes fechadas. |
 | `PORT` | Porta do servidor. O Render define sozinho; em casa o padrão é 3000. |
 
