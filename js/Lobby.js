@@ -38,6 +38,7 @@ var Lobby = (function () {
       '  <h1 class="marca marca-grande">Tá <span>Ligado?</span></h1>',
       '  <p class="lobby-sub">' + t('lobby.sub') + '</p>',
       '  <p class="lobby-aviso" role="status" hidden>' + t('lobby.salaEncerrada') + '</p>',
+      '  <p class="lobby-aviso lobby-conexao" data-lobby="conexao" role="status" hidden>' + t('conexao.acordando') + '</p>',
       '  <form class="cartao-modal lobby-cartao" data-form="entrar" autocomplete="off">',
       '    <label class="lobby-rotulo" for="lobby-nome">' + t('lobby.seuNome') + '</label>',
       '    <input class="lobby-campo" id="lobby-nome" name="nome" maxlength="20" placeholder="' + t('lobby.nomeExemplo') + '">',
@@ -122,6 +123,7 @@ var Lobby = (function () {
             '<p class="lobby-sub">' + t('lobby.voltando') + '</p></div>';
         }
       }
+      if (tela === 'inicio') raiz.querySelector('[data-lobby="conexao"]').hidden = rede.conectado();
       if (tela === 'sala') renderSala(sala);
     }
 

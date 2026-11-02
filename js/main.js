@@ -1,8 +1,9 @@
 /**
  * main — liga as peças.
  * Aberto pelo servidor (npm start), tenta o modo online: salas por código, cada um no seu aparelho.
- * Enquanto o servidor não responde, mostra "Conectando…"; se não der, explica e oferece tentar de
- * novo ou jogar num aparelho só. Aberto direto do arquivo, joga num aparelho só.
+ * A tela inicial aparece sem esperar a conexão: enquanto o servidor acorda, ela avisa e o modo de um
+ * aparelho já funciona. Se nem o script da conexão carregar, explica e oferece tentar de novo ou
+ * jogar num aparelho só. Aberto direto do arquivo, joga num aparelho só.
  */
 (function () {
   'use strict';
@@ -142,7 +143,9 @@
     // A Rede assina o 'connect' antes de nós: ela volta para a sala salva assim que conectar.
     rede = Rede.criar(socket);
     social = Social.criar(rede);
-    socket.once('connect', jogarOnline);
+    // A tela inicial aparece já, sem esperar o servidor: enquanto ele acorda, ela avisa e o
+    // "Jogar num aparelho só" funciona. Criar ou entrar numa sala espera a conexão.
+    jogarOnline();
   };
   script.onerror = function () { clearTimeout(relogio); mostrarFalha(); };
   document.head.appendChild(script);
