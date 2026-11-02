@@ -18,6 +18,7 @@ var TextosEn = {
   // ---------- Conexão (main) ----------
   'conexao.conectando': 'Connecting to the server…',
   'conexao.demora': 'The first time each day it can take up to 1 minute.',
+  'conexao.acordando': 'Waking up the server… It can take up to a minute. Meanwhile, you can play on one device.',
   'conexao.falhaTitulo': 'Couldn\'t reach the server',
   'conexao.falhaTexto': 'Check your internet and try again. Or you can play by passing one device around.',
   'conexao.semConexao': 'No connection. Trying to reconnect…',

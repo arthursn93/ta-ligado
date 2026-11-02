@@ -21,6 +21,7 @@ var TextosPt = {
   // ---------- Conexão (main) ----------
   'conexao.conectando': 'Conectando ao servidor…',
   'conexao.demora': 'Na primeira vez do dia pode levar até 1 minuto.',
+  'conexao.acordando': 'Acordando o servidor… Pode levar até 1 minuto. Enquanto isso, dá para jogar num aparelho só.',
   'conexao.falhaTitulo': 'Não deu para falar com o servidor',
   'conexao.falhaTexto': 'Confira a internet e tente de novo. Se preferir, dá para jogar passando um aparelho só.',
   'conexao.semConexao': 'Sem conexão. Tentando reconectar…',

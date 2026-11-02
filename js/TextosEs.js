@@ -18,6 +18,7 @@ var TextosEs = {
   // ---------- Conexão (main) ----------
   'conexao.conectando': 'Conectando con el servidor…',
   'conexao.demora': 'La primera vez del día puede tardar hasta 1 minuto.',
+  'conexao.acordando': 'Despertando el servidor… Puede tardar hasta 1 minuto. Mientras tanto, se puede jugar en un solo dispositivo.',
   'conexao.falhaTitulo': 'No se pudo conectar con el servidor',
   'conexao.falhaTexto': 'Revisa tu internet e inténtalo de nuevo. Si prefieres, se puede jugar pasando un solo dispositivo.',
   'conexao.semConexao': 'Sin conexión. Intentando reconectar…',

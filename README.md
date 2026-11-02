@@ -50,7 +50,7 @@ Bom saber sobre o plano gratuito:
 - Para evitar isso, o robô `.github/workflows/manter-acordado.yml` (GitHub Actions, grátis em repositório público) pede `/saude` a cada 10 minutos. Ele não toca no banco. Um mês inteiro acordado usa até 744 das 750 horas grátis da conta no Render ([documentação](https://render.com/docs/free)), então só funciona bem se este for o único serviço grátis da conta. O GitHub pode atrasar execuções agendadas, e aí o servidor ainda pode dormir de vez em quando. Para desligar: aba **Actions** > **Manter acordado** > **Disable workflow**.
 - As salas ficam na memória do servidor. Se ele dormir, reiniciar ou receber uma versão nova, as salas abertas somem: o jogo volta sozinho para a tela inicial com o aviso "A sala foi encerrada" e a turma cria outra.
 - Quando o Render vai desligar a versão antiga (sinal `SIGTERM`), o servidor avisa na hora os aparelhos conectados: "O jogo está sendo atualizado. Esta sala vai fechar em instantes." Espera no máximo 1 segundo pelas confirmações e desliga; quem não recebeu vê "Reconectando…", como antes. Partidas em andamento não são gravadas, e as que já terminaram acabam de ser gravadas antes de desligar.
-- Enquanto o servidor acorda, a tela mostra "Conectando ao servidor…". Se depois de 1 minuto não der, aparece a opção de tentar de novo ou jogar num aparelho só.
+- A tela inicial aparece sem esperar o servidor. Enquanto ele acorda, ela mostra "Acordando o servidor… Pode levar até 1 minuto" e o modo de um aparelho só já funciona; criar ou entrar numa sala avisa que o servidor ainda está acordando. Se o arquivo de conexão não carregar em 1 minuto, aparece a opção de tentar de novo ou jogar num aparelho só.
 
 ### Logs
 

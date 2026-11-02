@@ -36,6 +36,7 @@ var Rede = (function () {
     var estado = null; // { sala, jogo } vindo do servidor
     var codigo = null;
     var conectado = false;
+    var jaConectou = false; // antes da primeira conexão, o servidor provavelmente está acordando
     var salaEncerrada = false; // a sala salva não existe mais (ex.: o servidor reiniciou)
     var reiniciando = false; // o servidor avisou que vai reiniciar e a sala vai fechar
     var assinantes = [];
@@ -51,7 +52,7 @@ var Rede = (function () {
 
     function pedir(evento, dados) {
       return new Promise(function (resolver) {
-        if (!socket.connected) { resolver({ ok: false, erro: t('conexao.semConexao') }); return; }
+        if (!socket.connected) { resolver({ ok: false, erro: t(jaConectou ? 'conexao.semConexao' : 'conexao.acordando') }); return; }
         socket.timeout(8000).emit(evento, dados || {}, function (falhou, resposta) {
           resolver(falhou ? { ok: false, erro: t('conexao.semResposta') } : Textos.traduzir(resposta));
         });
@@ -80,6 +81,7 @@ var Rede = (function () {
 
     socket.on('connect', function () {
       conectado = true;
+      jaConectou = true;
       reiniciando = false;
       // Conexão voltou (ou página recarregada): retoma o lugar na sala com o mesmo token.
       var salva = codigo || ler(CHAVE_SALA);
