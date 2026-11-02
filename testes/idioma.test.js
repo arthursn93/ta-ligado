@@ -14,21 +14,22 @@ function janela(busca, salvo) {
   };
 }
 
-test('começa em português; o endereço vale se nada foi escolhido; a escolha salva vale sobre o endereço', () => {
-  assert.equal(Idioma.inicial(janela('')), 'pt');
+test('começa em inglês; o endereço vale se nada foi escolhido; a escolha salva vale sobre o endereço', () => {
+  assert.equal(Idioma.inicial(janela('')), 'en');
   assert.equal(Idioma.inicial(janela('?sala=ABCD&idioma=en')), 'en');
-  assert.equal(Idioma.inicial(janela('?idioma=xx')), 'pt');
+  assert.equal(Idioma.inicial(janela('?idioma=xx')), 'en');
   assert.equal(Idioma.inicial(janela('?idioma=en', 'es')), 'es');
-  assert.equal(Idioma.inicial(janela('', 'lixo')), 'pt');
+  assert.equal(Idioma.inicial(janela('', 'lixo')), 'en');
 });
 
-test('sem escolha nem endereço, usa o idioma do navegador se o jogo tiver; senão português', () => {
+test('sem escolha nem endereço, usa o idioma do navegador se o jogo tiver; senão inglês', () => {
   const com = (languages, language, busca, salvo) => Object.assign(janela(busca, salvo), { navigator: { languages, language } });
   assert.equal(Idioma.inicial(com(['en-US', 'en'])), 'en');
   assert.equal(Idioma.inicial(com(['es-AR'])), 'es');
   assert.equal(Idioma.inicial(com(['pt-BR', 'en-US'])), 'pt');
   assert.equal(Idioma.inicial(com(['fr-FR', 'es'])), 'es', 'pula o que o jogo não tem');
-  assert.equal(Idioma.inicial(com(['fr-FR', 'de'])), 'pt');
+  assert.equal(Idioma.inicial(com(['fr-FR', 'de'])), 'en');
+  assert.equal(Idioma.inicial(com(['nl-BE'])), 'en', 'navegador em holandês abre em inglês');
   assert.equal(Idioma.inicial(com(undefined, 'en-GB')), 'en', 'navegador antigo só com language');
   assert.equal(Idioma.inicial(com(['en-US'], 'en-US', '?idioma=es')), 'es', 'o endereço vale mais');
   assert.equal(Idioma.inicial(com(['en-US'], 'en-US', '', 'pt')), 'pt', 'a escolha salva vale mais');
@@ -62,9 +63,9 @@ test('escolher troca a interface, salva e acerta o lang da página; idioma do en
   }
 });
 
-test('o convite leva o idioma, menos o português', () => {
+test('o convite sempre leva o idioma, até o português', () => {
   try {
-    assert.equal(Idioma.noEndereco(), '');
+    assert.equal(Idioma.noEndereco(), '&idioma=pt');
     Textos.usar('en');
     assert.equal(Idioma.noEndereco(), '&idioma=en');
   } finally {
