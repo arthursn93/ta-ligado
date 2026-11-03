@@ -297,3 +297,16 @@ test('caminhos relativos: as páginas funcionam numa subpasta (GitHub Pages, Cra
   }
   assert.deepEqual(absolutos, []);
 });
+
+test('voltar para o jogo aponta para o arquivo index.html, não para a pasta', () => {
+  // Hospedagens que só guardam arquivos (como a prévia da CrazyGames) não abrem o index.html de uma pasta:
+  // "./" vira um endereço que não existe (NoSuchKey). O link precisa nomear o arquivo.
+  const fs = require('fs');
+  const path = require('path');
+  for (const [nome, idioma] of [['privacidade.html', 'pt'], ['privacidade-en.html', 'en'], ['privacidade-es.html', 'es']]) {
+    const texto = fs.readFileSync(path.join(__dirname, '..', nome), 'utf8');
+    const links = [...texto.matchAll(/<a class="(marca|voltar)" href="([^"]*)"/g)].map((m) => m[1] + ' ' + m[2]);
+    assert.deepEqual(links, ['marca index.html?idioma=' + idioma, 'voltar index.html?idioma=' + idioma], nome);
+    assert.doesNotMatch(texto, /href="\.{1,2}\/(\?[^"]*)?"/, nome + ': link para pasta');
+  }
+});
